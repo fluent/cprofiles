@@ -1,0 +1,1 @@
+/usr/bin/clang  -Wall -D__CPROF_FILENAME__='"$$(subst /home/edsiper/c/cprofiles/,,$$(abspath $$<))"' -g -rdynamic "CMakeFiles/cprof-test-profile.dir/profile.c.o" -o cprof-test-profile  ../src/libcprofiles.a ../lib/mpack/libmpack.a ../lib/cfl/src/libcfl.a ../lib/fluent-otel-proto/src/libfluent-otel-proto.a ../lib/cfl/lib/xxhash/cmake_unofficial/libxxhash.a 
