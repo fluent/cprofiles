@@ -1,7 +1,9 @@
 set(src
   cprofiles.c
   cprof_profile.c
+  cprof_resource.c
   cprof_sample.c
+  cprof_decode_opentelemetry.c
   )
 
 set(src

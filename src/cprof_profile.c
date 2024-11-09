@@ -20,7 +20,7 @@
 
 #include <cprofiles/cprofiles.h>
 
-struct cprof_profile *cprof_profile_create(struct cprof *cprof)
+struct cprof_profile *cprof_profile_create_(struct cprof *cprof)
 {
     struct cprof_profile *profile;
 
@@ -49,12 +49,13 @@ struct cprof_profile *cprof_profile_create(struct cprof *cprof)
         return NULL;
     }
 
-    cfl_list_add(&profile->_head, &cprof->profiles);
+    /* cfl_list_add(&profile->_head, &cprof->profiles); */
+
     return profile;
 }
 
 
-void cprof_profile_destroy(struct cprof_profile *profile)
+void cprof_profile_destroy_(struct cprof_profile *profile)
 {
     int i;
     if (!profile) {
@@ -133,3 +134,39 @@ size_t cprof_profile_string_add(struct cprof_profile *profile, char *str, int st
 
     return id;
 }
+
+int cprof_profile_add_comment(struct cprof_profile *profile, int64_t comment)
+{
+    size_t new_size;
+    size_t alloc_slots = 32;
+    uint64_t *reallocated_array;
+
+    if (profile->comments == NULL) {
+        profile->comments = calloc(alloc_slots, sizeof(int64_t));
+
+        if (profile->comments == NULL) {
+            return -1;
+        }
+
+        profile->comments_count = 0;
+        profile->comments_size = alloc_slots;
+    }
+
+    if (profile->comments_count >= profile->comments_size) {
+        new_size = profile->comments_size + alloc_slots;
+        reallocated_array = realloc(profile->comments, new_size * sizeof(int64_t));
+
+        if (reallocated_array == NULL) {
+            return -1;
+        }
+
+        profile->comments = reallocated_array;
+        profile->comments_size = new_size;
+    }
+
+    profile->comments[profile->comments_count] = comment;
+    profile->comments_count++;
+
+    return 0;
+}
+

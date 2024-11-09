@@ -37,6 +37,7 @@ int cprof_sample_add_location_index(struct cprof_sample *sample, uint64_t locati
 {
     size_t new_size;
     size_t alloc_slots = 32;
+    uint64_t *reallocated_location_index;
 
     if (sample->location_index == NULL) {
         /*
@@ -44,9 +45,11 @@ int cprof_sample_add_location_index(struct cprof_sample *sample, uint64_t locati
          * since that's the way for protobuf differentiate between unset or  NULL
          */
         sample->location_index = calloc(1, alloc_slots * sizeof(uint64_t));
-        if (!sample->location_index) {
+
+        if (sample->location_index == NULL) {
             return -1;
         }
+
         sample->location_index[0] = 0; /* an empty string */
         sample->location_index_count = 1;
         sample->location_index_size = alloc_slots;
@@ -55,12 +58,14 @@ int cprof_sample_add_location_index(struct cprof_sample *sample, uint64_t locati
     /* check if we have space in the location index by checking location_index_size */
     if (sample->location_index_count >= sample->location_index_size) {
         new_size = sample->location_index_size + alloc_slots;
-        sample->location_index = realloc(sample->location_index, new_size * sizeof(uint64_t));
-        if (!sample->location_index) {
+        reallocated_location_index = realloc(sample->location_index, new_size * sizeof(uint64_t));
+
+        if (reallocated_location_index == NULL) {
             return -1;
         }
-        sample->location_index_size = new_size;
 
+        sample->location_index = reallocated_location_index;
+        sample->location_index_size = new_size;
     }
 
     /* add the location */
@@ -74,22 +79,28 @@ int cprof_sample_add_value(struct cprof_sample *sample, int64_t value)
 {
     size_t new_size;
     size_t alloc_slots = 32;
+    int64_t *reallocated_values;
 
     if (sample->values == NULL) {
         sample->values = calloc(alloc_slots, sizeof(int64_t));
-        if (!sample->values) {
+
+        if (sample->values == NULL) {
             return -1;
         }
+
         sample->value_count = 0;
         sample->value_size = alloc_slots;
     }
 
     if (sample->value_count >= sample->value_size) {
         new_size = sample->value_size + alloc_slots;
-        sample->values = realloc(sample->values, new_size * sizeof(int64_t));
-        if (!sample->values) {
+        reallocated_values = realloc(sample->values, new_size * sizeof(int64_t));
+
+        if (reallocated_values == NULL) {
             return -1;
         }
+
+        sample->values = reallocated_values;
         sample->value_size = new_size;
     }
 
@@ -99,14 +110,51 @@ int cprof_sample_add_value(struct cprof_sample *sample, int64_t value)
     return 0;
 }
 
+int cprof_sample_add_attribute(struct cprof_sample *sample, uint64_t attribute)
+{
+    size_t new_size;
+    size_t alloc_slots = 32;
+    uint64_t *reallocated_attributes;
+
+    if (sample->attributes == NULL) {
+        sample->attributes = calloc(alloc_slots, sizeof(uint64_t));
+
+        if (sample->attributes == NULL) {
+            return -1;
+        }
+
+        sample->attributes_count = 0;
+        sample->attributes_size = alloc_slots;
+    }
+
+    if (sample->attributes_count >= sample->attributes_size) {
+        new_size = sample->attributes_size + alloc_slots;
+        reallocated_attributes = realloc(sample->attributes, new_size * sizeof(uint64_t));
+
+        if (reallocated_attributes == NULL) {
+            return -1;
+        }
+
+        sample->attributes = reallocated_attributes;
+        sample->attributes_size = new_size;
+    }
+
+    sample->attributes[sample->attributes_count] = attribute;
+    sample->attributes_count++;
+
+    return 0;
+}
+
 int cprof_sample_add_timestamp(struct cprof_sample *sample, uint64_t timestamp)
 {
     size_t new_size;
     size_t alloc_slots = 32;
+    uint64_t *reallocated_timestamps;
 
     if (sample->timestamps_unix_nano == NULL) {
         sample->timestamps_unix_nano = calloc(alloc_slots, sizeof(uint64_t));
-        if (!sample->timestamps_unix_nano) {
+
+        if (sample->timestamps_unix_nano == NULL) {
             return -1;
         }
 
@@ -116,10 +164,13 @@ int cprof_sample_add_timestamp(struct cprof_sample *sample, uint64_t timestamp)
 
     if (sample->timestamps_count >= sample->timestamps_size) {
         new_size = sample->timestamps_size + alloc_slots;
-        sample->timestamps_unix_nano = realloc(sample->timestamps_unix_nano, new_size * sizeof(uint64_t));
-        if (!sample->timestamps_unix_nano) {
+        reallocated_timestamps = realloc(sample->timestamps_unix_nano, new_size * sizeof(uint64_t));
+
+        if (reallocated_timestamps == NULL) {
             return -1;
         }
+
+        sample->timestamps_unix_nano = reallocated_timestamps;
         sample->timestamps_size = new_size;
     }
 
