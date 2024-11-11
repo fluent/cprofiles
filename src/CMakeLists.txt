@@ -1,8 +1,17 @@
 set(src
   cprofiles.c
+  cprof_attribute_unit.c
+  cprof_function.c
+  cprof_instrumentation_scope.c
+  cprof_line.c
+  cprof_link.c
+  cprof_location.c
+  cprof_mapping.c
   cprof_profile.c
+  cprof_resource_profiles.c
   cprof_resource.c
   cprof_sample.c
+  cprof_scope_profiles.c
   cprof_decode_opentelemetry.c
   )
 
