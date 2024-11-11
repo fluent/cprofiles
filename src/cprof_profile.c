@@ -20,12 +20,13 @@
 
 #include <cprofiles/cprofiles.h>
 
-struct cprof_profile *cprof_profile_create_(struct cprof *cprof)
+struct cprof_profile *cprof_profile_create()
 {
     struct cprof_profile *profile;
 
     profile = calloc(1, sizeof(struct cprof_profile));
-    if (!profile) {
+
+    if (profile == NULL) {
         return NULL;
     }
 
@@ -33,59 +34,69 @@ struct cprof_profile *cprof_profile_create_(struct cprof *cprof)
     cfl_list_init(&profile->samples);
     cfl_list_init(&profile->mappings);
     cfl_list_init(&profile->locations);
+    cfl_list_init(&profile->functions);
     cfl_list_init(&profile->attribute_units);
     cfl_list_init(&profile->link_table);
 
-    profile->attribute_table = cfl_kvlist_create();
-    if (!profile->attribute_table) {
-        free(profile);
-        return NULL;
-    }
-
     profile->attributes = cfl_kvlist_create();
-    if (!profile->attributes) {
-        cfl_kvlist_destroy(profile->attribute_table);
-        free(profile);
+
+    if (profile->attributes == NULL) {
+        cprof_profile_destroy(profile);
+
         return NULL;
     }
 
-    /* cfl_list_add(&profile->_head, &cprof->profiles); */
+    profile->attribute_table = cfl_kvlist_create();
+
+    if (profile->attribute_table == NULL) {
+        cprof_profile_destroy(profile);
+
+        return NULL;
+    }
 
     return profile;
 }
 
-
-void cprof_profile_destroy_(struct cprof_profile *profile)
+int cprof_profile_add_location_index(struct cprof_profile *profile, int64_t index)
 {
-    int i;
-    if (!profile) {
-        return;
-    }
+    size_t new_size;
+    size_t alloc_slots = 32;
+    int64_t *reallocated_array;
 
-    if (profile->location_indices) {
-        free(profile->location_indices);
-    }
+    if (profile->location_indices == NULL) {
+        profile->location_indices = calloc(alloc_slots, sizeof(int64_t));
 
-    cfl_kvlist_destroy(profile->attribute_table);
-    cfl_kvlist_destroy(profile->attributes);
-
-    /* delete strings */
-    if (profile->string_table) {
-        for (i = 0; i < profile->string_table_count; i++) {
-            cfl_sds_destroy(profile->string_table[i]);
+        if (profile->location_indices == NULL) {
+            return -1;
         }
-        free(profile->string_table);
+
+        profile->location_indices_count = 0;
+        profile->location_indices_size = alloc_slots;
     }
 
-    /* destroy sample types */
-    cprof_sample_type_destroy_all(profile);
+    if (profile->location_indices_count >= profile->location_indices_size) {
+        new_size = profile->location_indices_size + alloc_slots;
+        reallocated_array = realloc(profile->location_indices, new_size * sizeof(int64_t));
 
-    /* destroy samples */
-    cprof_sample_destroy_all(profile);
+        if (reallocated_array == NULL) {
+            return -1;
+        }
 
-    free(profile);
+        profile->location_indices = reallocated_array;
+        profile->location_indices_size = new_size;
+    }
+
+    profile->location_indices[profile->location_indices_count] = index;
+    profile->location_indices_count++;
+
+    return 0;
 }
 
+
+void cprof_profile_destroy(struct cprof_profile *instance)
+{
+
+}
 size_t cprof_profile_string_add(struct cprof_profile *profile, char *str, int str_len)
 {
     int alloc_size = 64;
@@ -139,7 +150,7 @@ int cprof_profile_add_comment(struct cprof_profile *profile, int64_t comment)
 {
     size_t new_size;
     size_t alloc_slots = 32;
-    uint64_t *reallocated_array;
+    int64_t *reallocated_array;
 
     if (profile->comments == NULL) {
         profile->comments = calloc(alloc_slots, sizeof(int64_t));
@@ -169,4 +180,3 @@ int cprof_profile_add_comment(struct cprof_profile *profile, int64_t comment)
 
     return 0;
 }
-
