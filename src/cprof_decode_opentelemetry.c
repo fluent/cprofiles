@@ -1,7 +1,27 @@
+/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+
+/*  CProfiles
+ *  =========
+ *  Copyright (C) 2024 The CProfiles Authors
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+
 #include <cprofiles/cprof_decode_opentelemetry.h>
 #include <cfl/cfl_sds.h>
 
-static inline minimum_size(size_t first_size, size_t second_size)
+static inline size_t minimum_size(size_t first_size, size_t second_size)
 {
     if (first_size < second_size) {
         return first_size;
@@ -203,7 +223,6 @@ static struct cprof_resource *
     struct cprof_resource *output_resource;
     struct cfl_kvlist     *attributes;
     int                    result;
-    size_t                 index;
 
     attributes = cfl_kvlist_create();
 
@@ -242,7 +261,6 @@ static struct cprof_instrumentation_scope *decode_instrumentation_scope(
 {
     struct cprof_instrumentation_scope *instrumentation_scope;
     int                                 result;
-    size_t                              index;
 
     instrumentation_scope = cprof_instrumentation_scope_create(
         input_instrumentation_scope->name,
@@ -661,7 +679,6 @@ static int decode_profile_container_entry(struct cprof_scope_profiles *scope_pro
 {
     struct cprof_profile    *profile;
     int                      result;
-    size_t                   index;
 
     if (input_profile_container->profile_id.data == NULL ||
         input_profile_container->profile_id.len != 16) {
@@ -689,7 +706,7 @@ static int decode_profile_container_entry(struct cprof_scope_profiles *scope_pro
     if (result != CPROF_DECODE_OPENTELEMETRY_SUCCESS) {
         cprof_profile_destroy(profile);
 
-        return NULL;
+        return CPROF_DECODE_OPENTELEMETRY_ALLOCATION_ERROR;
     }
 
     profile->dropped_attributes_count = input_profile_container->dropped_attributes_count;
@@ -700,20 +717,30 @@ static int decode_profile_container_entry(struct cprof_scope_profiles *scope_pro
         if (profile->original_payload_format == NULL) {
             cprof_profile_destroy(profile);
 
-            return NULL;
+            return CPROF_DECODE_OPENTELEMETRY_ALLOCATION_ERROR;
         }
     }
 
     if (input_profile_container->original_payload.data != NULL &&
         input_profile_container->original_payload.len > 0) {
-        profile->original_payload = cfl_sds_create_len(input_profile_container->original_payload.data,
-                                                       input_profile_container->original_payload.len);
+        profile->original_payload = \
+            cfl_sds_create_len(
+                (const char *) input_profile_container->original_payload.data,
+                input_profile_container->original_payload.len);
 
         if (profile->original_payload == NULL) {
             cprof_profile_destroy(profile);
 
-            return NULL;
+            return CPROF_DECODE_OPENTELEMETRY_ALLOCATION_ERROR;
         }
+    }
+
+    result = decode_profile_entry(
+                profile,
+                input_profile_container->profile);
+
+    if (result != CPROF_DECODE_OPENTELEMETRY_SUCCESS) {
+        return result;
     }
 
     return CPROF_DECODE_OPENTELEMETRY_SUCCESS;
