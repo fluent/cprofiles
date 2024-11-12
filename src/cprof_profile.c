@@ -95,8 +95,136 @@ int cprof_profile_add_location_index(struct cprof_profile *profile, int64_t inde
 
 void cprof_profile_destroy(struct cprof_profile *instance)
 {
+    struct cfl_list             *iterator_backup;
+    struct cprof_attribute_unit *attribute_unit;
+    struct cprof_value_type     *value_type;
+    struct cprof_mapping        *location;
+    struct cprof_function       *function;
+    struct cfl_list             *iterator;
+    struct cprof_mapping        *mapping;
+    struct cprof_sample         *sample;
+    size_t                       index;
+    struct cprof_link           *link;
 
+    if (instance->attributes != NULL) {
+        cfl_kvlist_destroy(instance->attributes);
+    }
+
+    if (instance->original_payload_format != NULL) {
+        cfl_sds_destroy(instance->original_payload_format);
+    }
+
+    if (instance->original_payload != NULL) {
+        cfl_sds_destroy(instance->original_payload);
+    }
+
+    cfl_list_foreach_safe(iterator,
+                          iterator_backup,
+                          &instance->sample_type) {
+        value_type = cfl_list_entry(iterator,
+                                    struct cprof_value_type,
+                                    _head);
+
+        cfl_list_del(&value_type->_head);
+
+        cprof_sample_type_destroy(value_type);
+    }
+
+    cfl_list_foreach_safe(iterator,
+                          iterator_backup,
+                          &instance->samples) {
+        sample = cfl_list_entry(iterator,
+                                struct cprof_sample,
+                                _head);
+
+        cfl_list_del(&sample->_head);
+
+        cprof_sample_destroy(sample);
+    }
+
+    cfl_list_foreach_safe(iterator,
+                          iterator_backup,
+                          &instance->mappings) {
+        mapping = cfl_list_entry(iterator,
+                                 struct cprof_mapping,
+                                 _head);
+
+        cfl_list_del(&mapping->_head);
+
+        cprof_mapping_destroy(mapping);
+    }
+
+    cfl_list_foreach_safe(iterator,
+                          iterator_backup,
+                          &instance->locations) {
+        location = cfl_list_entry(iterator,
+                                  struct cprof_location,
+                                  _head);
+
+        cfl_list_del(&location->_head);
+
+        cprof_location_destroy(location);
+    }
+
+    if (instance->location_indices != NULL) {
+        free(instance->location_indices);
+    }
+
+    cfl_list_foreach_safe(iterator,
+                          iterator_backup,
+                          &instance->functions) {
+        function = cfl_list_entry(iterator,
+                                  struct cprof_function,
+                                  _head);
+
+        cfl_list_del(&function->_head);
+
+        cprof_function_destroy(function);
+    }
+
+    if (instance->attribute_table != NULL) {
+        cfl_kvlist_destroy(instance->attribute_table);
+    }
+
+    cfl_list_foreach_safe(iterator,
+                          iterator_backup,
+                          &instance->attribute_units) {
+        attribute_unit = cfl_list_entry(iterator,
+                                        struct cprof_attribute_unit,
+                                        _head);
+
+        cfl_list_del(&attribute_unit->_head);
+
+        cprof_attribute_unit_destroy(attribute_unit);
+    }
+
+    cfl_list_foreach_safe(iterator,
+                          iterator_backup,
+                          &instance->link_table) {
+        link = cfl_list_entry(iterator,
+                              struct cprof_link,
+                              _head);
+
+        cfl_list_del(&link->_head);
+
+        cprof_link_destroy(link);
+    }
+
+    if (instance->string_table != NULL) {
+        for (index = 0 ; index < instance->string_table_count ; index++) {
+            cfl_sds_destroy(instance->string_table[index]);
+        }
+
+        free(instance->string_table);
+    }
+
+    if (instance->comments != NULL) {
+        free(instance->comments);
+    }
+
+    free(instance);
 }
+
 size_t cprof_profile_string_add(struct cprof_profile *profile, char *str, int str_len)
 {
     int alloc_size = 64;
