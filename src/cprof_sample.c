@@ -182,25 +182,26 @@ int cprof_sample_add_timestamp(struct cprof_sample *sample, uint64_t timestamp)
 
 void cprof_sample_destroy(struct cprof_sample *sample)
 {
-    if (!sample) {
+    if (sample != NULL) {
+        if (sample->location_index) {
+            free(sample->location_index);
+        }
+
+        if (sample->values != NULL) {
+            free(sample->values);
+        }
+
+        if (sample->attributes != NULL) {
+            free(sample->attributes);
+        }
+
+        if (sample->timestamps_unix_nano != NULL) {
+            free(sample->timestamps_unix_nano);
+        }
+
+        free(sample);
         return;
     }
-
-    if (sample->location_index) {
-        free(sample->location_index);
-    }
-
-    if (sample->values) {
-        free(sample->values);
-    }
-
-    /* timestamps */
-    if (sample->timestamps_unix_nano) {
-        free(sample->timestamps_unix_nano);
-    }
-
-    cfl_list_del(&sample->_head);
-    free(sample);
 }
 
 
@@ -265,12 +266,9 @@ struct cprof_value_type *cprof_sample_type_str_create(struct cprof_profile *prof
 
 void cprof_sample_type_destroy(struct cprof_value_type *sample_type)
 {
-    if (!sample_type) {
-        return;
+    if (sample_type != NULL) {
+        free(sample_type);
     }
-
-    cfl_list_del(&sample_type->_head);
-    free(sample_type);
 }
 
 void cprof_sample_type_destroy_all(struct cprof_profile *profile)
