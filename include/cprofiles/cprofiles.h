@@ -269,50 +269,6 @@ struct cprof {
  */
 
 
-static struct cprof_profile *cprof_profile_create();
-static int cprof_profile_add_location_index(struct cprof_profile *profile, int64_t index);
-static void cprof_profile_destroy(struct cprof_profile *instance);
-
-static int cprof_resource_profiles_add(struct cprof *context,
-                                       struct cprof_resource_profiles *resource_profiles);
-
-
-static struct cprof_attribute_unit *cprof_attribute_unit_create(struct cprof_profile *profile);
-static void cprof_attribute_unit_destroy(struct cprof_attribute_unit *instance);
-
-
-static struct cprof_mapping *cprof_mapping_create(struct cprof_profile *profile);
-static void cprof_mapping_destroy(struct cprof_mapping *instance);
-static int cprof_mapping_add_attribute(struct cprof_mapping *mapping, uint64_t attribute);
-
-static struct cprof_line *cprof_line_create(struct cprof_location *location);
-static void cprof_line_destroy(struct cprof_line *instance);
-static struct cprof_location *cprof_location_create(struct cprof_profile *profile);
-static int cprof_location_add_attribute(struct cprof_location *location, uint64_t attribute);
-static void cprof_location_destroy(struct cprof_location *instance);
-
-
-static struct cprof_resource *cprof_resource_create(struct cfl_kvlist *attributes);
-static void cprof_resource_destroy(struct cprof_resource *resource);
-
-static struct cprof_instrumentation_scope *cprof_instrumentation_scope_create(
-                                            char *name,
-                                            char *version,
-                                            struct cfl_kvlist *attributes,
-                                            uint32_t dropped_attributes_count);
-static void cprof_instrumentation_scope_destroy(
-                struct cprof_instrumentation_scope *instance);
-
-
-static struct cprof_scope_profiles *cprof_scope_profiles_create(
-    struct cprof_resource_profiles *resource_profiles,
-    char *schema_url);
-static void cprof_scope_profiles_destroy(struct cprof_scope_profiles *instance);
-static struct cprof_resource_profiles *cprof_resource_profiles_create(char *schema_url);
-static void cprof_resource_profiles_destroy(struct cprof_resource_profiles *instance);
-
-static struct cprof_link *cprof_link_create(struct cprof_profile *profile);
-static void cprof_link_destroy(struct cprof_link *instance);
 
 
 struct cprof *cprof_create();
@@ -320,320 +276,66 @@ void cprof_destroy(struct cprof *cprof);
 char *cprof_version();
 
 /* Profile */
-//struct cprof_profile *cprof_profile_create(struct cprof *cprof);
-//void cprof_profile_destroy(struct cprof_profile *profile);
+struct cprof_profile *cprof_profile_create();
+int cprof_profile_add_location_index(struct cprof_profile *profile, int64_t index);
+void cprof_profile_destroy(struct cprof_profile *instance);
+
 size_t cprof_profile_string_add(struct cprof_profile *profile, char *str, int str_len);
 int cprof_profile_add_comment(struct cprof_profile *profile, int64_t comment);
 
-static struct cprof_profile *cprof_profile_create()
-{
-    struct cprof_profile *profile;
 
-    profile = calloc(1, sizeof(struct cprof_profile));
-
-    if (profile == NULL) {
-        return NULL;
-    }
-
-    cfl_list_init(&profile->sample_type);
-    cfl_list_init(&profile->samples);
-    cfl_list_init(&profile->mappings);
-    cfl_list_init(&profile->locations);
-    cfl_list_init(&profile->functions);
-    cfl_list_init(&profile->attribute_units);
-    cfl_list_init(&profile->link_table);
-
-    profile->attributes = cfl_kvlist_create();
-
-    if (profile->attributes == NULL) {
-        cprof_profile_destroy(profile);
-
-        return NULL;
-    }
-
-    profile->attribute_table = cfl_kvlist_create();
-
-    if (profile->attribute_table == NULL) {
-        cprof_profile_destroy(profile);
-
-        return NULL;
-    }
-
-    return profile;
-}
-
-static int cprof_profile_add_location_index(struct cprof_profile *profile, int64_t index)
-{
-    size_t new_size;
-    size_t alloc_slots = 32;
-    uint64_t *reallocated_array;
-
-    if (profile->location_indices == NULL) {
-        profile->location_indices = calloc(alloc_slots, sizeof(int64_t));
-
-        if (profile->location_indices == NULL) {
-            return -1;
-        }
-
-        profile->location_indices_count = 0;
-        profile->location_indices_size = alloc_slots;
-    }
-
-    if (profile->location_indices_count >= profile->location_indices_size) {
-        new_size = profile->location_indices_size + alloc_slots;
-        reallocated_array = realloc(profile->location_indices, new_size * sizeof(int64_t));
-
-        if (reallocated_array == NULL) {
-            return -1;
-        }
-
-        profile->location_indices = reallocated_array;
-        profile->location_indices_size = new_size;
-    }
-
-    profile->location_indices[profile->location_indices_count] = index;
-    profile->location_indices_count++;
-
-    return 0;
-}
+/* Attribute unit */
+struct cprof_attribute_unit *cprof_attribute_unit_create(struct cprof_profile *profile);
+void cprof_attribute_unit_destroy(struct cprof_attribute_unit *instance);
 
 
-static void cprof_profile_destroy(struct cprof_profile *instance)
-{
+/* Mapping */
+struct cprof_mapping *cprof_mapping_create(struct cprof_profile *profile);
+void cprof_mapping_destroy(struct cprof_mapping *instance);
+int cprof_mapping_add_attribute(struct cprof_mapping *mapping, uint64_t attribute);
 
-}
+/* Line */
+struct cprof_line *cprof_line_create(struct cprof_location *location);
+void cprof_line_destroy(struct cprof_line *instance);
 
-static int cprof_resource_profiles_add(struct cprof *context,
-                                       struct cprof_resource_profiles *resource_profiles)
-{
-    cfl_list_add(&resource_profiles->_head, &context->profiles);
-
-    return 0; /* CPROF_DECODE_OPENTELEMETRY_SUCCESS; */
-}
-
+/* Location */
+struct cprof_location *cprof_location_create(struct cprof_profile *profile);
+int cprof_location_add_attribute(struct cprof_location *location, uint64_t attribute);
+void cprof_location_destroy(struct cprof_location *instance);
 
 /* Resource */
-static struct cprof_resource *cprof_resource_create(struct cfl_kvlist *attributes)
-{
-    struct cprof_resource *resource;
+struct cprof_resource *cprof_resource_create(struct cfl_kvlist *attributes);
+void cprof_resource_destroy(struct cprof_resource *resource);
+int cprof_resource_profiles_add(struct cprof *context,
+                                struct cprof_resource_profiles *resource_profiles);
 
-    resource = calloc(1, sizeof(struct cprof_resource));
-
-    if (resource == NULL) {
-        return NULL;
-    }
-
-    if (attributes == NULL) {
-        resource->attributes = cfl_kvlist_create();
-
-        if (resource->attributes == NULL) {
-            free(resource);
-
-            return NULL;
-        }
-    }
-    else {
-        resource->attributes = attributes;
-    }
-
-    return resource;
-}
-
-static void cprof_resource_destroy(struct cprof_resource *resource)
-{
-    if (resource->attributes != NULL) {
-        cfl_kvlist_destroy(resource->attributes);
-    }
-
-    free(resource);
-}
-
-/* Instrumentation Scope */
-static struct cprof_instrumentation_scope *cprof_instrumentation_scope_create(
-                                            char *name,
-                                            char *version,
-                                            struct cfl_kvlist *attributes,
-                                            uint32_t dropped_attributes_count)
-
-    {
-    struct cprof_instrumentation_scope *instance;
-
-    instance = calloc(1, sizeof(struct cprof_instrumentation_scope));
-
-    if (instance == NULL) {
-        return NULL;
-    }
-
-    if (name != NULL) {
-        instance->name = cfl_sds_create(name);
-
-        if (instance->name == NULL) {
-            cprof_instrumentation_scope_destroy(instance);
-
-            return NULL;
-        }
-    }
-
-    if (version != NULL) {
-        instance->version = cfl_sds_create(version);
-
-        if (instance->version == NULL) {
-            cprof_instrumentation_scope_destroy(instance);
-
-            return NULL;
-        }
-    }
-
-    if (attributes != NULL) {
-        instance->attributes = attributes;
-    }
-    else {
-        instance->attributes = cfl_kvlist_create();
-
-        if (instance->attributes == NULL) {
-            cprof_instrumentation_scope_destroy(instance);
-
-            return NULL;
-        }
-    }
-
-    instance->dropped_attributes_count = dropped_attributes_count;
-
-    return instance;
-}
-
-static void cprof_instrumentation_scope_destroy(
-                struct cprof_instrumentation_scope *instance)
-{
-    if (instance != NULL) {
-        if (instance->name != NULL) {
-            cfl_sds_destroy(instance->name);
-        }
-
-        if (instance->version != NULL) {
-            cfl_sds_destroy(instance->version);
-        }
-
-        if (instance->attributes != NULL) {
-            cfl_kvlist_destroy(instance->attributes);
-        }
-
-        free(instance);
-    }
-}
+/* Instrumentation scope */
+struct cprof_instrumentation_scope *cprof_instrumentation_scope_create(
+                                        char *name,
+                                        char *version,
+                                        struct cfl_kvlist *attributes,
+                                        uint32_t dropped_attributes_count);
+void cprof_instrumentation_scope_destroy(
+            struct cprof_instrumentation_scope *instance);
 
 /* Scope profiles */
-static struct cprof_scope_profiles *cprof_scope_profiles_create(
-        struct cprof_resource_profiles *resource_profiles,
-        char *schema_url) {
-    struct cprof_scope_profiles *instance;
-
-    instance = calloc(1, sizeof(struct cprof_scope_profiles));
-
-    if (instance != NULL) {
-        if (schema_url != NULL) {
-            instance->schema_url = cfl_sds_create(schema_url);
-
-            cfl_list_init(&instance->profiles);
-
-            cfl_list_add(&instance->_head, &resource_profiles->scope_profiles);
-        }
-        else {
-            free(instance);
-
-            instance = NULL;
-        }
-    }
-
-    return instance;
-}
-
-
-static void cprof_scope_profiles_destroy(struct cprof_scope_profiles *instance) {
-    struct cprof_profile *profile;
-    struct cfl_list      *iterator;
-    struct cfl_list      *iterator_backup;
-
-    if (instance != NULL) {
-        if (instance->schema_url != NULL) {
-            cfl_sds_destroy(instance->schema_url);
-        }
-
-        if (instance->scope != NULL) {
-            cprof_instrumentation_scope_destroy(instance->scope);
-        }
-
-        cfl_list_foreach_safe(iterator,
-                              iterator_backup,
-                              &instance->profiles) {
-            profile = cfl_list_entry(iterator,
-                                     struct cprof_profile, _head);
-
-            cfl_list_del(&profile->_head);
-
-            cprof_profile_destroy(profile);
-        }
-
-        free(instance);
-    }
-}
-
-
+struct cprof_scope_profiles *cprof_scope_profiles_create(
+    struct cprof_resource_profiles *resource_profiles,
+    char *schema_url);
+void cprof_scope_profiles_destroy(struct cprof_scope_profiles *instance);
 
 /* Resource profiles */
-static struct cprof_resource_profiles *cprof_resource_profiles_create(char *schema_url) {
-    struct cprof_resource_profiles *instance;
+struct cprof_resource_profiles *cprof_resource_profiles_create(char *schema_url);
+void cprof_resource_profiles_destroy(struct cprof_resource_profiles *instance);
 
-    instance = calloc(1, sizeof(struct cprof_resource_profiles));
+/* Function */
 
-    if (instance != NULL) {
-        if (schema_url != NULL) {
-            instance->schema_url = cfl_sds_create(schema_url);
+struct cprof_function *cprof_function_create(struct cprof_profile *profile);
+void cprof_function_destroy(struct cprof_function *instance);
 
-            cfl_list_init(&instance->scope_profiles);
-        }
-        else {
-            free(instance);
-
-            instance = NULL;
-        }
-    }
-
-    return instance;
-}
-
-
-static void cprof_resource_profiles_destroy(struct cprof_resource_profiles *instance) {
-    struct cfl_list             *iterator;
-    struct cprof_scope_profiles *scope_profiles;
-    struct cfl_list             *iterator_backup;
-
-    if (instance != NULL) {
-        if (instance->schema_url != NULL) {
-            cfl_sds_destroy(instance->schema_url);
-        }
-
-        if (instance->resource != NULL) {
-            cprof_resource_destroy(instance->resource);
-        }
-
-        cfl_list_foreach_safe(iterator,
-                              iterator_backup,
-                              &instance->scope_profiles) {
-            scope_profiles = cfl_list_entry(iterator,
-                                            struct cprof_scope_profiles, _head);
-
-            cfl_list_del(&scope_profiles->_head);
-
-            cprof_scope_profiles_destroy(scope_profiles);
-        }
-
-        free(instance);
-    }
-}
-
-
-
+/* Link */
+struct cprof_link *cprof_link_create(struct cprof_profile *profile);
+void cprof_link_destroy(struct cprof_link *instance);
 
 /* Sample */
 struct cprof_sample *cprof_sample_create(struct cprof_profile *profile);
@@ -646,286 +348,13 @@ int cprof_sample_add_location_index(struct cprof_sample *sample, uint64_t locati
 int cprof_sample_add_attribute(struct cprof_sample *sample, uint64_t attribute);
 
 /* Sample type */
+void cprof_sample_type_destroy(struct cprof_value_type *sample_type);
+void cprof_sample_type_destroy_all(struct cprof_profile *profile);
+
 struct cprof_value_type *cprof_sample_type_create(struct cprof_profile *profile,
                                                   int64_t type, int64_t unit, int aggregation_temporality);
 struct cprof_value_type *cprof_sample_type_str_create(struct cprof_profile *profile,
                                                       char *type_str, char *unit_str,
                                                       int aggregation_temporality);
-
-void cprof_sample_type_destroy(struct cprof_value_type *sample_type);
-void cprof_sample_type_destroy_all(struct cprof_profile *profile);
-
-
-
-/* Mapping */
-
-static struct cprof_mapping *cprof_mapping_create(struct cprof_profile *profile)
-{
-    struct cprof_mapping *instance;
-
-    instance = calloc(1, sizeof(struct cprof_mapping));
-
-    if (instance == NULL) {
-        return NULL;
-    }
-
-    cfl_list_add(&instance->_head, &profile->mappings);
-
-    return instance;
-}
-
-static void cprof_mapping_destroy(struct cprof_mapping *instance)
-{
-    if (instance != NULL) {
-        if (instance->attributes != NULL) {
-            free(instance->attributes);
-
-            instance->attributes = NULL;
-        }
-
-        if (cfl_list_entry_is_orphan(&instance->_head) == CFL_FALSE) {
-            cfl_list_del(&instance->_head);
-        }
-
-        free(instance);
-    }
-}
-
-
-static int cprof_mapping_add_attribute(struct cprof_mapping *mapping, uint64_t attribute)
-{
-    size_t new_size;
-    size_t alloc_slots = 32;
-    uint64_t *reallocated_attributes;
-
-    if (mapping->attributes == NULL) {
-        mapping->attributes = calloc(alloc_slots, sizeof(uint64_t));
-
-        if (mapping->attributes == NULL) {
-            return -1;
-        }
-
-        mapping->attributes_count = 0;
-        mapping->attributes_size = alloc_slots;
-    }
-
-    if (mapping->attributes_count >= mapping->attributes_size) {
-        new_size = mapping->attributes_size + alloc_slots;
-        reallocated_attributes = realloc(mapping->attributes, new_size * sizeof(uint64_t));
-
-        if (reallocated_attributes == NULL) {
-            return -1;
-        }
-
-        mapping->attributes = reallocated_attributes;
-        mapping->attributes_size = new_size;
-    }
-
-    mapping->attributes[mapping->attributes_count] = attribute;
-    mapping->attributes_count++;
-
-    return 0;
-}
-
-/* Line */
-static struct cprof_line *cprof_line_create(struct cprof_location *location)
-{
-    struct cprof_line *instance;
-
-    instance = calloc(1, sizeof(struct cprof_line));
-
-    if (instance == NULL) {
-        return NULL;
-    }
-
-    cfl_list_add(&instance->_head, &location->lines);
-
-    return instance;
-}
-
-static void cprof_line_destroy(struct cprof_line *instance)
-{
-    if (instance != NULL) {
-        if (cfl_list_entry_is_orphan(&instance->_head) == CFL_FALSE) {
-            cfl_list_del(&instance->_head);
-        }
-
-        free(instance);
-    }
-}
-
-/* Location */
-
-static struct cprof_location *cprof_location_create(struct cprof_profile *profile)
-{
-    struct cprof_location *instance;
-
-    instance = calloc(1, sizeof(struct cprof_location));
-
-    if (instance == NULL) {
-        return NULL;
-    }
-
-    cfl_list_init(&instance->lines);
-
-    cfl_list_add(&instance->_head, &profile->locations);
-
-    return instance;
-}
-
-static int cprof_location_add_attribute(struct cprof_location *location, uint64_t attribute)
-{
-    size_t new_size;
-    size_t alloc_slots = 32;
-    uint64_t *reallocated_attributes;
-
-    if (location->attributes == NULL) {
-        location->attributes = calloc(alloc_slots, sizeof(uint64_t));
-
-        if (location->attributes == NULL) {
-            return -1;
-        }
-
-        location->attributes_count = 0;
-        location->attributes_size = alloc_slots;
-    }
-
-    if (location->attributes_count >= location->attributes_size) {
-        new_size = location->attributes_size + alloc_slots;
-        reallocated_attributes = realloc(location->attributes, new_size * sizeof(uint64_t));
-
-        if (reallocated_attributes == NULL) {
-            return -1;
-        }
-
-        location->attributes = reallocated_attributes;
-        location->attributes_size = new_size;
-    }
-
-    location->attributes[location->attributes_count] = attribute;
-    location->attributes_count++;
-
-    return 0;
-}
-
-
-static void cprof_location_destroy(struct cprof_location *instance)
-{
-    struct cprof_line *line;
-    struct cfl_list   *iterator;
-    struct cfl_list   *iterator_backup;
-
-    if (instance != NULL) {
-        if (instance->attributes != NULL) {
-            free(instance->attributes);
-
-            instance->attributes = NULL;
-        }
-
-        cfl_list_foreach_safe(iterator,
-                              iterator_backup,
-                              &instance->lines) {
-            line = cfl_list_entry(iterator,
-                                  struct cprof_line, _head);
-
-            cfl_list_del(&line->_head);
-
-            cprof_line_destroy(line);
-        }
-
-        if (cfl_list_entry_is_orphan(&instance->_head) == CFL_FALSE) {
-            cfl_list_del(&instance->_head);
-        }
-
-        free(instance);
-    }
-}
-
-/* Function */
-
-/* Mapping */
-
-static struct cprof_function *cprof_function_create(struct cprof_profile *profile)
-{
-    struct cprof_function *instance;
-
-    instance = calloc(1, sizeof(struct cprof_function));
-
-    if (instance == NULL) {
-        return NULL;
-    }
-
-    cfl_list_add(&instance->_head, &profile->functions);
-
-    return instance;
-}
-
-static void cprof_function_destroy(struct cprof_function *instance)
-{
-    if (instance != NULL) {
-        if (cfl_list_entry_is_orphan(&instance->_head) == CFL_FALSE) {
-            cfl_list_del(&instance->_head);
-        }
-
-        free(instance);
-    }
-}
-
-/* Attribute unit */
-
-static struct cprof_attribute_unit *cprof_attribute_unit_create(struct cprof_profile *profile)
-{
-    struct cprof_attribute_unit *instance;
-
-    instance = calloc(1, sizeof(struct cprof_attribute_unit));
-
-    if (instance == NULL) {
-        return NULL;
-    }
-
-    cfl_list_add(&instance->_head, &profile->attribute_units);
-
-    return instance;
-}
-
-static void cprof_attribute_unit_destroy(struct cprof_attribute_unit *instance)
-{
-    if (instance != NULL) {
-        if (cfl_list_entry_is_orphan(&instance->_head) == CFL_FALSE) {
-            cfl_list_del(&instance->_head);
-        }
-
-        free(instance);
-    }
-}
-
-/* Link */
-
-
-static struct cprof_link *cprof_link_create(struct cprof_profile *profile)
-{
-    struct cprof_link *instance;
-
-    instance = calloc(1, sizeof(struct cprof_link));
-
-    if (instance == NULL) {
-        return NULL;
-    }
-
-    cfl_list_add(&instance->_head, &profile->link_table);
-
-    return instance;
-}
-
-static void cprof_link_destroy(struct cprof_link *instance)
-{
-    if (instance != NULL) {
-        if (cfl_list_entry_is_orphan(&instance->_head) == CFL_FALSE) {
-            cfl_list_del(&instance->_head);
-        }
-
-        free(instance);
-    }
-}
 
 #endif
