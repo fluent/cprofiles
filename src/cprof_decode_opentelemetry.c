@@ -115,7 +115,6 @@ static int decode_profile_sample_entry(struct cprof_sample *sample,
         result = cprof_sample_add_location_index(sample, input_sample->location_index[index]);
 
         if (result != 0) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR;
         }
     }
@@ -127,7 +126,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
         result = cprof_sample_add_value(sample, input_sample->value[index]);
 
         if (result != 0) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR;
         }
     }
@@ -139,7 +137,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
         result = cprof_sample_add_attribute(sample, input_sample->attributes[index]);
 
         if (result != 0) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR;
         }
     }
@@ -151,7 +148,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
         result = cprof_sample_add_timestamp(sample, input_sample->timestamps_unix_nano[index]);
 
         if (result != 0) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR;
         }
     }
@@ -225,7 +221,6 @@ static int decode_location_entry(struct cprof_location *location,
         line = cprof_line_create(location);
 
         if (line == NULL) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_ALLOCATION_ERROR;
         }
 
@@ -327,7 +322,6 @@ static int decode_profile_entry(struct cprof_profile *profile,
                         input_profile->sample_type[index]->aggregation_temporality);
 
         if (sample_type == NULL) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR;
         }
     }
@@ -338,7 +332,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
         sample = cprof_sample_create(profile);
 
         if (sample == NULL) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_ALLOCATION_ERROR;
         }
 
@@ -346,7 +339,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
                                              input_profile->sample[index]);
 
         if (result != CPROF_DECODE_OPENTELEMETRY_SUCCESS) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR;
         }
     }
@@ -357,7 +349,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
         mapping = cprof_mapping_create(profile);
 
         if (mapping == NULL) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_ALLOCATION_ERROR;
         }
 
@@ -365,7 +356,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
                                       input_profile->mapping[index]);
 
         if (result != CPROF_DECODE_OPENTELEMETRY_SUCCESS) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR;
         }
     }
@@ -376,7 +366,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
         location = cprof_location_create(profile);
 
         if (location == NULL) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_ALLOCATION_ERROR;
         }
 
@@ -384,7 +373,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
                                        input_profile->location[index]);
 
         if (result != CPROF_DECODE_OPENTELEMETRY_SUCCESS) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR;
         }
     }
@@ -396,7 +384,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
         result = cprof_profile_add_location_index(profile, input_profile->location_indices[index]);
 
         if (result != 0) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR;
         }
     }
@@ -407,7 +394,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
         function = cprof_function_create(profile);
 
         if (function == NULL) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_ALLOCATION_ERROR;
         }
 
@@ -415,7 +401,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
                                        input_profile->function[index]);
 
         if (result != CPROF_DECODE_OPENTELEMETRY_SUCCESS) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR;
         }
     }
@@ -425,7 +410,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
                                        input_profile->n_attribute_table);
 
     if (result != CPROF_DECODE_OPENTELEMETRY_SUCCESS) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
         return CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR;
     }
 
@@ -435,7 +419,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
         attribute_unit = cprof_attribute_unit_create(profile);
 
         if (attribute_unit == NULL) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_ALLOCATION_ERROR;
         }
 
@@ -443,7 +426,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
                                              input_profile->attribute_units[index]);
 
         if (result != CPROF_DECODE_OPENTELEMETRY_SUCCESS) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR;
         }
     }
@@ -454,7 +436,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
         link = cprof_link_create(profile);
 
         if (link == NULL) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_ALLOCATION_ERROR;
         }
 
@@ -462,7 +443,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
                                          input_profile->link_table[index]);
 
         if (result != CPROF_DECODE_OPENTELEMETRY_SUCCESS) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR;
         }
     }
@@ -476,7 +456,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
                                     strlen(input_profile->string_table[index]));
 
         if (string_table_add_result == -1) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR;
         }
     }
@@ -489,7 +468,6 @@ printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
                     input_profile->comment[index]);
 
         if (result != 0) {
-printf("%s ERROR %d\n", __FUNCTION__, __LINE__);
             return CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR;
         }
     }
