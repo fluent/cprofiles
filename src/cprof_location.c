@@ -96,10 +96,6 @@ void cprof_location_destroy(struct cprof_location *instance)
             cprof_line_destroy(line);
         }
 
-        if (cfl_list_entry_is_orphan(&instance->_head) == CFL_FALSE) {
-            cfl_list_del(&instance->_head);
-        }
-
         free(instance);
     }
 }
