@@ -20,6 +20,7 @@
 #include <time.h>
 #include "cprof_tests.h"
 #include <cprofiles/cprof_decode_opentelemetry.h>
+#include <cprofiles/cprof_encode_text.h>
 
 #include <stdio.h>
 #include <inttypes.h>
@@ -167,6 +168,7 @@ static void print_profile_(struct cprof_profile *profile)
 /* a basic test */
 static void test_decoder()
 {
+    cfl_sds_t     text_result;
     struct cprof *context;
     int           result;
     size_t        offset;
@@ -181,9 +183,21 @@ static void test_decoder()
                                                 sizeof(encoded_packet),
                                                 &offset);
 
-    cprof_decode_opentelemetry_destroy(context);
+    if (result == CPROF_DECODE_OPENTELEMETRY_SUCCESS) {
+        result = cprof_encode_text_create(&text_result, context);
 
-    (void) result;
+        if (result != CPROF_ENCODE_TEXT_SUCCESS)  {
+            printf("TEXT ENCODING FAILED WITH ERROR : %d\n", result);
+        }
+        else {
+            printf("\n\n\n%s\n\n\n", text_result);
+            /* cprof_encode_text_destroy(text_result); */
+        }
+
+
+
+        cprof_decode_opentelemetry_destroy(context);
+    }
 }
 
 TEST_LIST = {
