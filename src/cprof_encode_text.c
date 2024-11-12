@@ -2316,11 +2316,6 @@ int cprof_encode_text_create(cfl_sds_t *result_buffer,
 
                 return result;
             }
-
-
-    printf("\n\n\n\n\n\n%s\n\n\n\n\n\n", context.output_buffer);
-
-
         }
 
         result = decrement_indentation_level(&context);
