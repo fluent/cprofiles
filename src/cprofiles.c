@@ -17,6 +17,7 @@
  *  limitations under the License.
  */
 
+
 #include <cprofiles/cprofiles.h>
 
 struct cprof *cprof_create()
@@ -27,6 +28,7 @@ struct cprof *cprof_create()
     if (!cprof) {
         return NULL;
     }
+
     cfl_list_init(&cprof->profiles);
 
     return cprof;
@@ -34,19 +36,26 @@ struct cprof *cprof_create()
 
 void cprof_destroy(struct cprof *cprof)
 {
-    struct cfl_list *tmp;
-    struct cfl_list *head;
-    struct cprof_profile *profile;
+    struct cprof_resource_profiles *resource_profile;
+    struct cfl_list                *iterator_backup;
+    struct cfl_list                *iterator;
 
     if (!cprof) {
         return;
     }
 
-    cfl_list_foreach_safe(head, tmp, &cprof->profiles) {
-        profile = cfl_list_entry(head, struct cprof_profile, _head);
-        cfl_list_del(&profile->_head);
-        cprof_profile_destroy(profile);
+    cfl_list_foreach_safe(iterator,
+                          iterator_backup,
+                          &cprof->profiles) {
+        resource_profile = cfl_list_entry(iterator,
+                                          struct cprof_resource_profiles,
+                                          _head);
+
+        cfl_list_del(&resource_profile->_head);
+
+        cprof_resource_profiles_destroy(resource_profile);
     }
+
     free(cprof);
 }
 
