@@ -239,7 +239,7 @@ size_t cprof_profile_string_add(struct cprof_profile *profile, char *str, int st
         str_len = strlen(str);
     }
 
-    if (!profile->string_table) {
+    if (!profile->string_table && str_len > 0) {
         profile->string_table = malloc(alloc_size * sizeof(cfl_sds_t));
         if (!profile->string_table) {
             return -1;
