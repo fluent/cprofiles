@@ -138,13 +138,15 @@ endif()
 # Configure header files
 configure_file(
   "${PROJECT_SOURCE_DIR}/include/cprofiles/cprof_info.h.in"
-  "${PROJECT_SOURCE_DIR}/include/cprofiles/cprof_info.h"
+  "${PROJECT_BINARY_DIR}/include/cprofiles/cprof_info.h"
   )
 
 configure_file(
   "${PROJECT_SOURCE_DIR}/include/cprofiles/cprof_version.h.in"
-  "${PROJECT_SOURCE_DIR}/include/cprofiles/cprof_version.h"
+  "${PROJECT_BINARY_DIR}/include/cprofiles/cprof_version.h"
   )
+
+include_directories("${PROJECT_BINARY_DIR}/include/")
 
 # Installation Directories
 # ========================
