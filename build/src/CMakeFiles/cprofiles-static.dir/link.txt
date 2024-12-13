@@ -1,2 +1,0 @@
-/usr/bin/ar qc libcprofiles.a "CMakeFiles/cprofiles-static.dir/cprofiles.c.o" "CMakeFiles/cprofiles-static.dir/cprof_profile.c.o" "CMakeFiles/cprofiles-static.dir/cprof_sample.c.o"
-/usr/bin/ranlib libcprofiles.a
