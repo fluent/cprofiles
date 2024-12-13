@@ -208,7 +208,6 @@ static int increment_indentation_level(
 
 static int decrement_indentation_level(
             struct cprof_text_encoding_context *context) {
-    cfl_sds_t result;
     if (context->indentation_level <= 0) {
         return CPROF_ENCODE_TEXT_SUCCESS;
     }
@@ -297,7 +296,6 @@ static int encode_string(
 {
     char      *local_indentation;
     cfl_sds_t  result;
-    size_t     index;
 
     if (indent) {
         local_indentation = (char *) context->indentation_buffer;
@@ -329,7 +327,6 @@ static int encode_double(
 {
     char      *local_indentation;
     cfl_sds_t  result;
-    size_t     index;
 
     if (indent) {
         local_indentation = (char *) context->indentation_buffer;
@@ -361,7 +358,6 @@ static int encode_uint64_t(
 {
     char      *local_indentation;
     cfl_sds_t  result;
-    size_t     index;
 
     if (indent) {
         local_indentation = (char *) context->indentation_buffer;
@@ -393,7 +389,6 @@ static int encode_int64_t(
 {
     char      *local_indentation;
     cfl_sds_t result;
-    size_t    index;
 
     if (indent) {
         local_indentation = (char *) context->indentation_buffer;
@@ -426,7 +421,6 @@ static int encode_bool(
     char      *local_indentation;
     char      *local_value;
     cfl_sds_t result;
-    size_t    index;
 
     if (indent) {
         local_indentation = (char *) context->indentation_buffer;
@@ -716,7 +710,6 @@ static int encode_cfl_kvlist(
     cfl_sds_t          sds_result;
     struct cfl_list   *iterator;
     int                result;
-    size_t             index;
     struct cfl_kvpair *entry;
 
     if (indent) {
@@ -858,7 +851,7 @@ static int encode_cfl_variant(
                                    indent,
                                    prefix,
                                    suffix,
-                                   value->data.as_bytes,
+                                   (uint8_t *) value->data.as_bytes,
                                    cfl_sds_len(value->data.as_bytes),
                                    CFL_TRUE);
             break;
@@ -970,18 +963,15 @@ static int encode_cprof_value_type(
 static int encode_cprof_sample(
                 struct cprof_text_encoding_context *context,
                 struct cprof_sample *instance) {
-    cfl_sds_t sds_result;
-    int       result;
-    size_t    index;
+    int result;
 
-
-    result = encode_int64_t_array(context,
-                                  CFL_TRUE,
-                                  "Location index : [ ",
-                                  ", ",
-                                  "]\n",
-                                  instance->location_index,
-                                  instance->location_index_count);
+    result = encode_uint64_t_array(context,
+                                   CFL_TRUE,
+                                   "Location index : [ ",
+                                   ", ",
+                                   "]\n",
+                                   instance->location_index,
+                                   instance->location_index_count);
 
     if (result != CPROF_ENCODE_TEXT_SUCCESS) {
         return result;
@@ -1067,8 +1057,7 @@ static int encode_cprof_sample(
 static int encode_cprof_mapping(
                 struct cprof_text_encoding_context *context,
                 struct cprof_mapping *instance) {
-    int       result;
-    size_t    index;
+    int result;
 
     result = encode_uint64_t(context,
                              CFL_TRUE,
@@ -1183,8 +1172,7 @@ static int encode_cprof_mapping(
 static int encode_cprof_line(
                 struct cprof_text_encoding_context *context,
                 struct cprof_line *instance) {
-    int       result;
-    size_t    index;
+    int result;
 
     result = encode_uint64_t(context,
                              CFL_TRUE,
@@ -1226,7 +1214,6 @@ static int encode_cprof_location(
                 struct cprof_location *instance) {
     struct cfl_list   *iterator;
     int                result;
-    size_t             index;
     struct cprof_line *line;
 
     result = encode_uint64_t(context,
@@ -1316,8 +1303,7 @@ static int encode_cprof_location(
 static int encode_cprof_function(
                 struct cprof_text_encoding_context *context,
                 struct cprof_function *instance) {
-    int    result;
-    size_t index;
+    int result;
 
     result = encode_uint64_t(context,
                              CFL_TRUE,
@@ -1378,8 +1364,7 @@ static int encode_cprof_function(
 static int encode_cprof_attribute_unit(
                 struct cprof_text_encoding_context *context,
                 struct cprof_attribute_unit *instance) {
-    int    result;
-    size_t index;
+    int result;
 
     result = encode_int64_t(context,
                             CFL_TRUE,
@@ -1408,8 +1393,7 @@ static int encode_cprof_link(
                 struct cprof_text_encoding_context *context,
                 struct cprof_link *instance)
 {
-    int    result;
-    size_t index;
+    int result;
 
     result = encode_bytes(context,
                           CFL_TRUE,
@@ -1450,7 +1434,6 @@ static int encode_cprof_profile(
     struct cprof_mapping        *mapping;
     struct cprof_sample         *sample;
     int                          result;
-    size_t                       index;
     struct cprof_link           *link;
 
     result = encode_bytes(context,
@@ -1654,13 +1637,13 @@ static int encode_cprof_profile(
         }
     }
 
-    result = encode_uint64_t_array(context,
-                                   CFL_TRUE,
-                                   "Location indices : [ ",
-                                   ", ",
-                                   "]\n",
-                                   instance->location_indices,
-                                   instance->location_indices_count);
+    result = encode_int64_t_array(context,
+                                  CFL_TRUE,
+                                  "Location indices : [ ",
+                                  ", ",
+                                  "]\n",
+                                  instance->location_indices,
+                                  instance->location_indices_count);
 
     if (result != CPROF_ENCODE_TEXT_SUCCESS) {
         return result;
@@ -1909,7 +1892,7 @@ static int encode_cprof_resource_profiles(
                 struct cprof_resource_profiles *instance) {
     int result;
     struct cfl_list             *iterator;
-    struct cprof_scope_profile *scope_profile;
+    struct cprof_scope_profiles *scope_profile;
 
     result = encode_string(context,
                             CFL_TRUE,
@@ -1996,9 +1979,7 @@ static int encode_cprof_resource_profiles(
 static int encode_cprof_instrumentation_scope(
                 struct cprof_text_encoding_context *context,
                 struct cprof_instrumentation_scope *instance) {
-    int                   result;
-    struct cfl_list      *iterator;
-    struct cprof_profile *profile;
+    int result;
 
     result = encode_string(context,
                             CFL_TRUE,
