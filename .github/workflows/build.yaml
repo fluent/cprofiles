@@ -59,7 +59,7 @@ jobs:
           cmake3 -DCPROF_DEV=on ../
           make
         shell: bash
-        working-directory: build
+        working-directory: cprofiles/build
 
   build-unix-arm64:
     name: Build sources on arm64 for ${{ matrix.os }} - ${{ matrix.compiler }}
