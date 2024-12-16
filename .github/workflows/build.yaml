@@ -47,12 +47,23 @@ jobs:
           yum install -y cmake3
         shell: bash
 
-      - name: Clone repo with submodules (1.8.3 version of Git)
+      - name: Clone repo without submodules (1.8.3 version of Git)
         run: |
-          git clone --recursive https://github.com/fluent/cprofiles.git
-          cd cprofiles
+          git clone https://github.com/fluent/cprofiles.git
+        shell: bash
+
+      - name: Check out the branch (1.8.3 version of Git)
+        run: |
           git checkout ${{ github.head_ref }}
         shell: bash
+        working-directory: cprofiles
+
+      - name: Fetch the appropriate sub modules
+        run: |
+          git submodule init
+          git submodule update
+        shell: bash
+        working-directory: cprofiles
 
       - name: Run compilation
         run: |
