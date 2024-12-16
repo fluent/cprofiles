@@ -143,6 +143,5 @@ jobs:
         with:
           preset: ${{ matrix.preset }}
           # dependencies_debian: ''
-          cmakeflags: '-DCTR_TESTS=On -DCMT_DEV=on ../'
+          cmakeflags: '-DCTR_TESTS=On -DCMT_DEV=on .'
           build_command: make all
-          working-directory: build
