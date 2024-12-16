@@ -88,8 +88,8 @@ jobs:
             export CC=${{ env.compiler }}
             cd build
             cmake -DCTR_TESTS=On ../
-            make all
-            CTEST_OUTPUT_ON_FAILURE=1 make test
+            cmake --build .
+            CTEST_OUTPUT_ON_FAILURE=1 ctest
         env:
           CC: ${{ matrix.compiler }}
 
@@ -112,8 +112,8 @@ jobs:
         run: |
           echo "CC = $CC, CXX = $CXX"
           cmake -DCTR_TESTS=On ../
-          make all
-          CTEST_OUTPUT_ON_FAILURE=1 make test
+          cmake --build .
+          CTEST_OUTPUT_ON_FAILURE=1 ctest
         shell: bash
         working-directory: build
         env:
