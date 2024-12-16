@@ -53,8 +53,10 @@ jobs:
         shell: bash
 
       - name: Check out the branch (1.8.3 version of Git)
+        env:
+          BRANCH_NAME: ${{ github.head_ref }}
         run: |
-          git checkout ${{ github.head_ref }}
+          git checkout "$BRANCH_NAME"
         shell: bash
         working-directory: cprofiles
 
