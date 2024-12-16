@@ -86,10 +86,10 @@ jobs:
             file \
             make
             export CC=${{ env.compiler }}
+            cd build
             cmake -DCTR_TESTS=On ../
             make all
             CTEST_OUTPUT_ON_FAILURE=1 make test
-        working-directory: build
         env:
           CC: ${{ matrix.compiler }}
 
