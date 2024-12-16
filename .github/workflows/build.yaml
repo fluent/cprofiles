@@ -47,17 +47,16 @@ jobs:
           yum install -y cmake3
         shell: bash
 
-      - name: Clone repo with submodules (1.8.3 version of Git)
-        run: |
-          git clone --recursive https://github.com/fluent/cprofiles.git
-        shell: bash
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Run compilation
         run: |
-          cmake3 -DCPROF_DEV=on .
+          cmake3 -DCPROF_DEV=on ../
           make
         shell: bash
-        working-directory: cprofiles
+        working-directory: build
 
   build-unix-arm64:
     name: Build sources on arm64 for ${{ matrix.os }} - ${{ matrix.compiler }}
@@ -87,9 +86,10 @@ jobs:
             file \
             make
             export CC=${{ env.compiler }}
-            cmake -DCTR_TESTS=On .
+            cmake -DCTR_TESTS=On ../
             make all
             CTEST_OUTPUT_ON_FAILURE=1 make test
+        working-directory: build
         env:
           CC: ${{ matrix.compiler }}
 
@@ -111,10 +111,11 @@ jobs:
       - name: Build on ${{ matrix.os }} with ${{ matrix.compiler }}
         run: |
           echo "CC = $CC, CXX = $CXX"
-          cmake -DCTR_TESTS=On .
+          cmake -DCTR_TESTS=On ../
           make all
           CTEST_OUTPUT_ON_FAILURE=1 make test
         shell: bash
+        working-directory: build
         env:
           CC: ${{ matrix.compiler }}
 
@@ -142,5 +143,6 @@ jobs:
         with:
           preset: ${{ matrix.preset }}
           # dependencies_debian: ''
-          cmakeflags: '-DCTR_TESTS=On -DCMT_DEV=on .'
+          cmakeflags: '-DCTR_TESTS=On -DCMT_DEV=on ../'
           build_command: make all
+          working-directory: build
