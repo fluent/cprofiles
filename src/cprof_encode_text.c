@@ -2214,7 +2214,7 @@ void print_profile(struct cprof_profile *profile)
         if (sample->timestamps_count > 0) {
             printf("    Timestamps:\n");
             for (i = 0; i < sample->timestamps_count; ++i) {
-                printf("      Timestamp %zu: %" PRIu64 " ns\n", i, sample->timestamps_unix_nano[i]);
+                printf("      Timestamp %d: %" PRIu64 " ns\n", i, sample->timestamps_unix_nano[i]);
             }
         } else {
             printf("    [No Timestamps]\n");
