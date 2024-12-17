@@ -103,7 +103,7 @@ jobs:
             make
             export CC=${{ env.compiler }}
             cd build
-            cmake -DCTR_TESTS=On ../
+            cmake -DCPROF_TESTS=On ../
             cmake --build .
             CTEST_OUTPUT_ON_FAILURE=1 ctest
         env:
@@ -127,7 +127,7 @@ jobs:
       - name: Build on ${{ matrix.os }} with ${{ matrix.compiler }}
         run: |
           echo "CC = $CC, CXX = $CXX"
-          cmake -DCTR_TESTS=On ../
+          cmake -DCPROF_TESTS=On ../
           cmake --build .
           CTEST_OUTPUT_ON_FAILURE=1 ctest
         shell: bash
@@ -159,5 +159,5 @@ jobs:
         with:
           preset: ${{ matrix.preset }}
           # dependencies_debian: ''
-          cmakeflags: '-DCTR_TESTS=On -DCMT_DEV=on .'
+          cmakeflags: '-DCPROF_TESTS=On -DCPROF_DEV=on .'
           build_command: make all
