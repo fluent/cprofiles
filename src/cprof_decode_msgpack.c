@@ -52,6 +52,12 @@ static int unpack_resource_attributes(mpack_reader_t *reader, size_t index, void
 
     resource = (struct cprof_resource *) user_data;
 
+    if (resource->attributes != NULL) {
+        cfl_kvlist_destroy(resource->attributes);
+
+        resource->attributes = NULL;
+    }
+
     result = unpack_cfl_kvlist(reader, &resource->attributes);
 
     if (result != 0) {
@@ -169,6 +175,12 @@ static int unpack_instrumentation_scope_attributes(mpack_reader_t *reader, size_
     }
 
     instrumentation_scope = (struct cprof_instrumentation_scope *) user_data;
+
+    if (instrumentation_scope->attributes != NULL) {
+        cfl_kvlist_destroy(instrumentation_scope->attributes);
+
+        instrumentation_scope->attributes = NULL;
+    }
 
     result = unpack_cfl_kvlist(reader, &instrumentation_scope->attributes);
 
@@ -310,6 +322,12 @@ static int unpack_profile_attributes(mpack_reader_t *reader, size_t index, void 
     }
 
     profile = (struct cprof_profile *) user_data;
+
+    if (profile->attributes != NULL) {
+        cfl_kvlist_destroy(profile->attributes);
+
+        profile->attributes = NULL;
+    }
 
     result = unpack_cfl_kvlist(reader, &profile->attributes);
 
@@ -1464,6 +1482,12 @@ static int unpack_profile_attribute_table(mpack_reader_t *reader, size_t index, 
     }
 
     profile = (struct cprof_profile *) user_data;
+
+    if (profile->attribute_table != NULL) {
+        cfl_kvlist_destroy(profile->attribute_table);
+
+        profile->attribute_table = NULL;
+    }
 
     result = unpack_cfl_kvlist(reader, &profile->attribute_table);
 
