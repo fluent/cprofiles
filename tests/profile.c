@@ -108,7 +108,7 @@ static void test_profile()
     TEST_CHECK(cprof != NULL);
 
     /* create profile */
-    profile = cprof_profile_create(cprof);
+    profile = cprof_profile_create();
     TEST_CHECK(profile != NULL);
 
     cprof_sample_type_str_create(profile, "CPU time", "ns", CPROF_AGGREGATION_TEMPORALITY_CUMULATIVE);
@@ -153,6 +153,8 @@ static void test_profile()
     }
 
     print_profile(profile);
+
+    cprof_profile_destroy(profile);
 
     /* destroy context */
     cprof_destroy(cprof);
