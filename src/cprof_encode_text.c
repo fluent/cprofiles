@@ -2256,6 +2256,10 @@ int cprof_encode_text_create(cfl_sds_t *result_buffer,
         return CPROF_ENCODE_TEXT_ALLOCATION_ERROR;
     }
 
+    memset(context.indentation_buffer,
+           0,
+           cfl_sds_alloc(context.indentation_buffer));
+
     context.indentation_level_size = 4;
     context.indentation_character = ' ';
 
