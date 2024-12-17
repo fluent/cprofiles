@@ -700,6 +700,8 @@ static void destroy_location(
             for (index = 0 ; index < instance->n_line ; index++) {
                 destroy_line(instance->line[index]);
             }
+
+            free(instance->line);
         }
 
         if (instance->attributes != NULL) {
@@ -758,28 +760,48 @@ static void destroy_profile(
     size_t index;
 
     if (instance != NULL) {
-        for (index = 0 ; index < instance->n_sample_type ; index++) {
-            destroy_value_type(instance->sample_type[index]);
+        if (instance->sample_type != NULL) {
+            for (index = 0 ; index < instance->n_sample_type ; index++) {
+                destroy_value_type(instance->sample_type[index]);
+            }
+
+            free(instance->sample_type);
         }
 
-        for (index = 0 ; index < instance->n_sample ; index++) {
-            destroy_sample(instance->sample[index]);
+        if (instance->sample != NULL) {
+            for (index = 0 ; index < instance->n_sample ; index++) {
+                destroy_sample(instance->sample[index]);
+            }
+
+            free(instance->sample);
         }
 
-        for (index = 0 ; index < instance->n_mapping ; index++) {
-            destroy_mapping(instance->mapping[index]);
+        if (instance->mapping != NULL) {
+            for (index = 0 ; index < instance->n_mapping ; index++) {
+                destroy_mapping(instance->mapping[index]);
+            }
+
+            free(instance->mapping);
         }
 
-        for (index = 0 ; index < instance->n_location ; index++) {
-            destroy_location(instance->location[index]);
+        if (instance->location != NULL) {
+            for (index = 0 ; index < instance->n_location ; index++) {
+                destroy_location(instance->location[index]);
+            }
+
+            free(instance->location);
         }
 
         if (instance->location_indices != NULL) {
             free(instance->location_indices);
         }
 
-        for (index = 0 ; index < instance->n_function ; index++) {
-            destroy_function(instance->function[index]);
+        if (instance->function != NULL) {
+            for (index = 0 ; index < instance->n_function ; index++) {
+                destroy_function(instance->function[index]);
+            }
+
+            free(instance->function);
         }
 
         if (instance->attribute_table != NULL) {
@@ -790,8 +812,12 @@ static void destroy_profile(
             destroy_attribute_unit(instance->attribute_units[index]);
         }
 
-        for (index = 0 ; index < instance->n_link_table ; index++) {
-            destroy_link(instance->link_table[index]);
+        if (instance->link_table != NULL) {
+            for (index = 0 ; index < instance->n_link_table ; index++) {
+                destroy_link(instance->link_table[index]);
+            }
+
+            free(instance->link_table);
         }
 
         if (instance->string_table != NULL) {
