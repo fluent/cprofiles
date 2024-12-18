@@ -363,6 +363,6 @@ if(CPROF_SYSTEM_MACOS)
 endif()
 
 # Create tarball
-add_custom_target(tarball COMMAND "bash" "${CMAKE_CURRENT_SOURCE_DIR}/create-submoduled-tarball.sh" "cprofiles-${CPROF_VERSION_STR}")
+add_custom_target(cprofiles_tarball COMMAND "bash" "${CMAKE_CURRENT_SOURCE_DIR}/create-submoduled-tarball.sh" "cprofiles-${CPROF_VERSION_STR}")
 
 include(CPack)
