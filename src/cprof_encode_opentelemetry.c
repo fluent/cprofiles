@@ -2247,6 +2247,7 @@ static int pack_cprof_resource_profiles(
     result = pack_cprof_resource(&otlp_resource_profiles->resource, input_instance->resource);
 
     if (result != CPROF_ENCODE_OPENTELEMETRY_SUCCESS) {
+        destroy_resource_profiles(otlp_resource_profiles);
         return result;
     }
 
