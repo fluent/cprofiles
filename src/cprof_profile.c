@@ -227,7 +227,7 @@ void cprof_profile_destroy(struct cprof_profile *instance)
 
 size_t cprof_profile_string_add(struct cprof_profile *profile, char *str, int str_len)
 {
-    int alloc_size = 64;
+    const int alloc_size = 64;
     size_t id;
     size_t new_size;
 
@@ -239,18 +239,25 @@ size_t cprof_profile_string_add(struct cprof_profile *profile, char *str, int st
         str_len = strlen(str);
     }
 
-    if (!profile->string_table && str_len > 0) {
-        profile->string_table = malloc(alloc_size * sizeof(cfl_sds_t));
-        if (!profile->string_table) {
+    if (profile->string_table == NULL) {
+        profile->string_table = calloc(alloc_size, sizeof(cfl_sds_t));
+
+        if (profile->string_table == NULL) {
             return -1;
         }
-        profile->string_table_size = alloc_size;
 
+        profile->string_table_size = alloc_size;
+        profile->string_table_count = 0;
+    }
+
+    if (profile->string_table_count == 0 && str_len > 0) {
         /* string_table[0] must always be "" */
         profile->string_table[0] = cfl_sds_create_len("", 0);
+
         if (!profile->string_table[0]) {
             return -1;
         }
+
         profile->string_table_count = 1;
     }
 
@@ -258,9 +265,11 @@ size_t cprof_profile_string_add(struct cprof_profile *profile, char *str, int st
     if (profile->string_table_count >= profile->string_table_size) {
         new_size = profile->string_table_size + alloc_size;
         profile->string_table = realloc(profile->string_table, new_size * sizeof(cfl_sds_t));
+
         if (!profile->string_table) {
             return -1;
         }
+
         profile->string_table_size = alloc_size;
     }
 
