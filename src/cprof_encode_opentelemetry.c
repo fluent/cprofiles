@@ -2188,6 +2188,7 @@ static int pack_cprof_scope_profiles(
         result = pack_cprof_instrumentation_scope(&otlp_scope_profiles->scope, input_instance->scope);
 
         if (result != CPROF_ENCODE_OPENTELEMETRY_SUCCESS) {
+            destroy_scope_profiles(otlp_scope_profiles);
             return result;
         }
     }
@@ -2246,6 +2247,7 @@ static int pack_cprof_resource_profiles(
     result = pack_cprof_resource(&otlp_resource_profiles->resource, input_instance->resource);
 
     if (result != CPROF_ENCODE_OPENTELEMETRY_SUCCESS) {
+        destroy_resource_profiles(otlp_resource_profiles);
         return result;
     }
 
