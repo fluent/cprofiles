@@ -612,16 +612,12 @@ static void destroy_sample(
             instance)
 {
     if (instance != NULL) {
-        if (instance->location_index != NULL) {
-            free(instance->location_index);
+        if (instance->values != NULL) {
+            free(instance->values);
         }
 
-        if (instance->value != NULL) {
-            free(instance->value);
-        }
-
-        if (instance->attributes != NULL) {
-            free(instance->attributes);
+        if (instance->attribute_indices != NULL) {
+            free(instance->attribute_indices);
         }
 
         if (instance->timestamps_unix_nano != NULL) {
@@ -638,8 +634,8 @@ static void destroy_mapping(
             instance)
 {
     if (instance != NULL) {
-        if (instance->attributes != NULL) {
-            free(instance->attributes);
+        if (instance->attribute_indices != NULL) {
+            free(instance->attribute_indices);
         }
 
         free(instance);
@@ -696,27 +692,30 @@ static void destroy_location(
     size_t index;
 
     if (instance != NULL) {
-        if (instance->line != NULL) {
-            for (index = 0 ; index < instance->n_line ; index++) {
-                destroy_line(instance->line[index]);
+        if (instance->lines != NULL) {
+            for (index = 0 ; index < instance->n_lines ; index++) {
+                destroy_line(instance->lines[index]);
             }
 
-            free(instance->line);
+            free(instance->lines);
         }
 
-        if (instance->attributes != NULL) {
-            free(instance->attributes);
+        if (instance->attribute_indices != NULL) {
+            free(instance->attribute_indices);
         }
 
         free(instance);
     }
 }
 
-static void destroy_attribute_unit(
-        Opentelemetry__Proto__Profiles__V1development__AttributeUnit *
+static void destroy_keyvalueandunit(
+        Opentelemetry__Proto__Profiles__V1development__KeyValueAndUnit *
             instance)
 {
     if (instance != NULL) {
+        if (instance->value != NULL) {
+            otlp_any_value_destroy(instance->value);
+        }
         free(instance);
     }
 }
@@ -761,113 +760,35 @@ static void destroy_profile(
 
     if (instance != NULL) {
         if (instance->sample_type != NULL) {
-            for (index = 0 ; index < instance->n_sample_type ; index++) {
-                destroy_value_type(instance->sample_type[index]);
+            destroy_value_type(instance->sample_type);
+        }
+
+        if (instance->samples != NULL) {
+            for (index = 0 ; index < instance->n_samples ; index++) {
+                destroy_sample(instance->samples[index]);
             }
-
-            free(instance->sample_type);
-        }
-
-        if (instance->sample != NULL) {
-            for (index = 0 ; index < instance->n_sample ; index++) {
-                destroy_sample(instance->sample[index]);
-            }
-
-            free(instance->sample);
-        }
-
-        if (instance->mapping != NULL) {
-            for (index = 0 ; index < instance->n_mapping ; index++) {
-                destroy_mapping(instance->mapping[index]);
-            }
-
-            free(instance->mapping);
-        }
-
-        if (instance->location != NULL) {
-            for (index = 0 ; index < instance->n_location ; index++) {
-                destroy_location(instance->location[index]);
-            }
-
-            free(instance->location);
-        }
-
-        if (instance->location_indices != NULL) {
-            free(instance->location_indices);
-        }
-
-        if (instance->function != NULL) {
-            for (index = 0 ; index < instance->n_function ; index++) {
-                destroy_function(instance->function[index]);
-            }
-
-            free(instance->function);
-        }
-
-        if (instance->attribute_table != NULL) {
-            destroy_attribute_list(instance->attribute_table);
-        }
-
-        for (index = 0 ; index < instance->n_attribute_units ; index++) {
-            destroy_attribute_unit(instance->attribute_units[index]);
-        }
-
-        if (instance->link_table != NULL) {
-            for (index = 0 ; index < instance->n_link_table ; index++) {
-                destroy_link(instance->link_table[index]);
-            }
-
-            free(instance->link_table);
-        }
-
-        if (instance->string_table != NULL) {
-            for (index = 0 ; index < instance->n_string_table ; index++) {
-                if (is_string_releaseable(instance->string_table[index])) {
-                    cfl_sds_destroy(instance->string_table[index]);
-                }
-            }
-
-            free(instance->string_table);
+            free(instance->samples);
         }
 
         if (instance->period_type != NULL) {
             destroy_value_type(instance->period_type);
         }
 
-        if (instance->comment != NULL) {
-            free(instance->comment);
+        if (instance->attribute_indices != NULL) {
+            free(instance->attribute_indices);
         }
 
-        free(instance);
-    }
-}
-
-static void destroy_profile_container(
-        Opentelemetry__Proto__Profiles__V1development__ProfileContainer *
-            instance)
-{
-    if (instance != NULL) {
-        if (instance->profile_id.data != NULL) {
-            if (is_string_releaseable((cfl_sds_t) instance->profile_id.data)) {
-                cfl_sds_destroy((cfl_sds_t) instance->profile_id.data);
-            }
+        if (instance->profile_id.data != NULL && is_string_releaseable((char *)instance->profile_id.data)) {
+            free(instance->profile_id.data);
         }
 
-        destroy_attribute_list(instance->attributes);
-
-        if (instance->original_payload_format != NULL) {
-            if (is_string_releaseable(instance->original_payload_format)) {
-                cfl_sds_destroy(instance->original_payload_format);
-            }
+        if (instance->original_payload_format != NULL && is_string_releaseable(instance->original_payload_format)) {
+            free(instance->original_payload_format);
         }
 
-        if (instance->original_payload.data != NULL) {
-            if (is_string_releaseable((cfl_sds_t) instance->original_payload.data)) {
-                cfl_sds_destroy((cfl_sds_t) instance->original_payload.data);
-            }
+        if (instance->original_payload.data != NULL && is_string_releaseable((char *)instance->original_payload.data)) {
+            free(instance->original_payload.data);
         }
-
-        destroy_profile(instance->profile);
 
         free(instance);
     }
@@ -886,7 +807,7 @@ static void destroy_scope_profiles(
 
         if (instance->profiles != NULL) {
             for (index = 0 ; index < instance->n_profiles ; index++) {
-                destroy_profile_container(instance->profiles[index]);
+                destroy_profile(instance->profiles[index]);
             }
 
             free(instance->profiles);
@@ -930,6 +851,71 @@ static void destroy_resource_profiles(
     }
 }
 
+static void destroy_stack(Opentelemetry__Proto__Profiles__V1development__Stack *instance)
+{
+    if (instance != NULL) {
+        if (instance->location_indices != NULL) {
+            free(instance->location_indices);
+        }
+        free(instance);
+    }
+}
+
+static void destroy_profiles_dictionary(
+        Opentelemetry__Proto__Profiles__V1development__ProfilesDictionary *dict)
+{
+    size_t index;
+
+    if (dict == NULL) {
+        return;
+    }
+    if (dict->mapping_table != NULL) {
+        for (index = 0; index < dict->n_mapping_table; index++) {
+            destroy_mapping(dict->mapping_table[index]);
+        }
+        free(dict->mapping_table);
+    }
+    if (dict->location_table != NULL) {
+        for (index = 0; index < dict->n_location_table; index++) {
+            destroy_location(dict->location_table[index]);
+        }
+        free(dict->location_table);
+    }
+    if (dict->function_table != NULL) {
+        for (index = 0; index < dict->n_function_table; index++) {
+            destroy_function(dict->function_table[index]);
+        }
+        free(dict->function_table);
+    }
+    if (dict->link_table != NULL) {
+        for (index = 0; index < dict->n_link_table; index++) {
+            destroy_link(dict->link_table[index]);
+        }
+        free(dict->link_table);
+    }
+    if (dict->string_table != NULL) {
+        for (index = 0; index < dict->n_string_table; index++) {
+            if (dict->string_table[index] != NULL && is_string_releaseable(dict->string_table[index])) {
+                free(dict->string_table[index]);
+            }
+        }
+        free(dict->string_table);
+    }
+    if (dict->attribute_table != NULL) {
+        for (index = 0; index < dict->n_attribute_table; index++) {
+            destroy_keyvalueandunit(dict->attribute_table[index]);
+        }
+        free(dict->attribute_table);
+    }
+    if (dict->stack_table != NULL) {
+        for (index = 0; index < dict->n_stack_table; index++) {
+            destroy_stack(dict->stack_table[index]);
+        }
+        free(dict->stack_table);
+    }
+    free(dict);
+}
+
 static void destroy_export_profiles_service_request(
         Opentelemetry__Proto__Collector__Profiles__V1development__ExportProfilesServiceRequest *
             instance)
@@ -943,6 +929,10 @@ static void destroy_export_profiles_service_request(
             }
 
             free(instance->resource_profiles);
+        }
+
+        if (instance->dictionary != NULL) {
+            destroy_profiles_dictionary(instance->dictionary);
         }
 
         free(instance);
@@ -973,7 +963,6 @@ static
 static
     Opentelemetry__Proto__Profiles__V1development__Sample *
         initialize_sample(
-            size_t location_index_count,
             size_t value_count,
             size_t attributes_count,
             size_t timestamps_count) {
@@ -987,40 +976,28 @@ static
 
     opentelemetry__proto__profiles__v1development__sample__init(instance);
 
-    if (location_index_count > 0) {
-        instance->location_index = calloc(location_index_count, sizeof(uint64_t));
-
-        if (instance->location_index == NULL) {
-            destroy_sample(instance);
-
-            return NULL;
-        }
-
-        instance->n_location_index = location_index_count;
-    }
-
     if (value_count > 0) {
-        instance->value = calloc(value_count, sizeof(int64_t));
+        instance->values = calloc(value_count, sizeof(int64_t));
 
-        if (instance->value == NULL) {
+        if (instance->values == NULL) {
             destroy_sample(instance);
 
             return NULL;
         }
 
-        instance->n_value = value_count;
+        instance->n_values = value_count;
     }
 
     if (attributes_count > 0) {
-        instance->attributes = calloc(attributes_count, sizeof(uint64_t));
+        instance->attribute_indices = calloc(attributes_count, sizeof(int32_t));
 
-        if (instance->attributes == NULL) {
+        if (instance->attribute_indices == NULL) {
             destroy_sample(instance);
 
             return NULL;
         }
 
-        instance->n_attributes = attributes_count;
+        instance->n_attribute_indices = attributes_count;
     }
 
     if (timestamps_count > 0) {
@@ -1072,17 +1049,17 @@ static
 }
 
 static
-    Opentelemetry__Proto__Profiles__V1development__AttributeUnit *
-        initialize_attribute_unit() {
-    Opentelemetry__Proto__Profiles__V1development__AttributeUnit *instance;
+    Opentelemetry__Proto__Profiles__V1development__KeyValueAndUnit *
+        initialize_keyvalueandunit(void) {
+    Opentelemetry__Proto__Profiles__V1development__KeyValueAndUnit *instance;
 
-    instance = calloc(1, sizeof(Opentelemetry__Proto__Profiles__V1development__AttributeUnit));
+    instance = calloc(1, sizeof(Opentelemetry__Proto__Profiles__V1development__KeyValueAndUnit));
 
     if (instance == NULL) {
         return NULL;
     }
 
-    opentelemetry__proto__profiles__v1development__attribute_unit__init(instance);
+    opentelemetry__proto__profiles__v1development__key_value_and_unit__init(instance);
 
     return instance;
 }
@@ -1133,27 +1110,27 @@ static
     opentelemetry__proto__profiles__v1development__location__init(instance);
 
     if (line_count > 0) {
-        instance->line = calloc(line_count, sizeof(void *));
+        instance->lines = calloc(line_count, sizeof(void *));
 
-        if (instance->line == NULL) {
+        if (instance->lines == NULL) {
             destroy_location(instance);
 
             return NULL;
         }
 
-        instance->n_line = line_count;
+        instance->n_lines = line_count;
     }
 
     if (attribute_count > 0) {
-        instance->attributes = calloc(attribute_count, sizeof(uint64_t));
+        instance->attribute_indices = calloc(attribute_count, sizeof(int32_t));
 
-        if (instance->attributes == NULL) {
+        if (instance->attribute_indices == NULL) {
             destroy_location(instance);
 
             return NULL;
         }
 
-        instance->n_attributes = attribute_count;
+        instance->n_attribute_indices = attribute_count;
     }
 
     return instance;
@@ -1189,15 +1166,15 @@ static
     opentelemetry__proto__profiles__v1development__mapping__init(instance);
 
     if (attribute_count > 0) {
-        instance->attributes = calloc(attribute_count, sizeof(uint64_t));
+        instance->attribute_indices = calloc(attribute_count, sizeof(int32_t));
 
-        if (instance->attributes == NULL) {
+        if (instance->attribute_indices == NULL) {
             destroy_mapping(instance);
 
             return NULL;
         }
 
-        instance->n_attributes = attribute_count;
+        instance->n_attribute_indices = attribute_count;
     }
 
     return instance;
@@ -1233,18 +1210,7 @@ static
 
 static
     Opentelemetry__Proto__Profiles__V1development__Profile *
-        initialize_profile(
-            size_t sample_type_count,
-            size_t sample_count,
-            size_t mapping_count,
-            size_t location_count,
-            size_t location_index_count,
-            size_t function_count,
-            size_t attribute_count,
-            size_t attribute_unit_count,
-            size_t link_count,
-            size_t string_count,
-            size_t comment_count) {
+        initialize_profile(size_t sample_count, size_t attribute_index_count) {
     Opentelemetry__Proto__Profiles__V1development__Profile *instance;
 
     instance = calloc(1, sizeof(Opentelemetry__Proto__Profiles__V1development__Profile));
@@ -1255,169 +1221,33 @@ static
 
     opentelemetry__proto__profiles__v1development__profile__init(instance);
 
-    if (sample_type_count > 0) {
-        instance->sample_type = calloc(sample_type_count, sizeof(void *));
-
-        if (instance->sample_type == NULL) {
-            destroy_profile(instance);
-
-            return NULL;
-        }
-
-        instance->n_sample_type = sample_type_count;
-    }
-
     if (sample_count > 0) {
-        instance->sample = calloc(sample_count, sizeof(void *));
+        instance->samples = calloc(sample_count, sizeof(void *));
 
-        if (instance->sample == NULL) {
+        if (instance->samples == NULL) {
             destroy_profile(instance);
 
             return NULL;
         }
 
-        instance->n_sample = sample_count;
+        instance->n_samples = sample_count;
     }
 
-    if (mapping_count > 0) {
-        instance->mapping = calloc(mapping_count, sizeof(void *));
+    if (attribute_index_count > 0) {
+        instance->attribute_indices = calloc(attribute_index_count, sizeof(int32_t));
 
-        if (instance->mapping == NULL) {
+        if (instance->attribute_indices == NULL) {
             destroy_profile(instance);
 
             return NULL;
         }
 
-        instance->n_mapping = mapping_count;
-    }
-
-    if (location_count > 0) {
-        instance->location = calloc(location_count, sizeof(void *));
-
-        if (instance->location == NULL) {
-            destroy_profile(instance);
-
-            return NULL;
-        }
-
-        instance->n_location = location_count;
-    }
-
-    if (location_index_count > 0) {
-        instance->location_indices = calloc(location_index_count, sizeof(uint64_t));
-
-        if (instance->location_indices == NULL) {
-            destroy_profile(instance);
-
-            return NULL;
-        }
-
-        instance->n_location_indices = location_index_count;
-    }
-
-    if (function_count > 0) {
-        instance->function = calloc(function_count, sizeof(void *));
-
-        if (instance->function == NULL) {
-            destroy_profile(instance);
-
-            return NULL;
-        }
-
-        instance->n_function = function_count;
-    }
-
-    if (attribute_count > 0) {
-        instance->attribute_table = calloc(attribute_count, sizeof(void *));
-
-        if (instance->attribute_table == NULL) {
-            destroy_profile(instance);
-
-            return NULL;
-        }
-
-        instance->n_attribute_table = attribute_count;
-    }
-
-    if (attribute_unit_count > 0) {
-        instance->attribute_units = calloc(attribute_unit_count, sizeof(void *));
-
-        if (instance->attribute_units == NULL) {
-            destroy_profile(instance);
-
-            return NULL;
-        }
-
-        instance->n_attribute_units = attribute_unit_count;
-    }
-
-    if (link_count > 0) {
-        instance->link_table = calloc(link_count, sizeof(void *));
-
-        if (instance->link_table == NULL) {
-            destroy_profile(instance);
-
-            return NULL;
-        }
-
-        instance->n_link_table = link_count;
-    }
-
-    if (string_count > 0) {
-        instance->string_table = calloc(string_count, sizeof(void *));
-
-        if (instance->string_table == NULL) {
-            destroy_profile(instance);
-
-            return NULL;
-        }
-
-        instance->n_string_table = string_count;
-    }
-
-    if (comment_count > 0) {
-        instance->comment = calloc(comment_count, sizeof(void *));
-
-        if (instance->comment == NULL) {
-            destroy_profile(instance);
-
-            return NULL;
-        }
-
-        instance->n_comment = comment_count;
+        instance->n_attribute_indices = attribute_index_count;
     }
 
     return instance;
 }
 
-
-static
-    Opentelemetry__Proto__Profiles__V1development__ProfileContainer *
-        initialize_profile_container(size_t attribute_count) {
-    Opentelemetry__Proto__Profiles__V1development__ProfileContainer *instance;
-
-    instance = calloc(1, sizeof(Opentelemetry__Proto__Profiles__V1development__ProfileContainer));
-
-    if (instance == NULL) {
-        return NULL;
-    }
-
-    opentelemetry__proto__profiles__v1development__profile_container__init(instance);
-
-    if (attribute_count > 0) {
-        instance->attributes = initialize_attribute_list(attribute_count);
-
-        if (instance->attributes == NULL) {
-            free(instance);
-
-            return NULL;
-        }
-    }
-
-    instance->n_attributes = attribute_count;
-
-    return instance;
-}
 
 static
     Opentelemetry__Proto__Profiles__V1development__ScopeProfiles *
@@ -1598,9 +1428,9 @@ static int pack_cprof_value_type(
         return CPROF_ENCODE_OPENTELEMETRY_ALLOCATION_ERROR;
     }
 
-    otlp_value_type->type = input_instance->type;
-    otlp_value_type->unit = input_instance->unit;
-    otlp_value_type->aggregation_temporality = input_instance->aggregation_temporality;
+    /* type/unit are now string table indices; use 0 until dictionary encoding */
+    otlp_value_type->type_strindex = 0;
+    otlp_value_type->unit_strindex = 0;
 
     *output_instance = otlp_value_type;
 
@@ -1614,8 +1444,7 @@ static int pack_cprof_sample(
     Opentelemetry__Proto__Profiles__V1development__Sample *otlp_sample;
     size_t                                                 index;
 
-    otlp_sample = initialize_sample(input_instance->location_index_count,
-                                    input_instance->value_count,
+    otlp_sample = initialize_sample(input_instance->value_count,
                                     input_instance->attributes_count,
                                     input_instance->timestamps_count);
 
@@ -1623,28 +1452,22 @@ static int pack_cprof_sample(
         return CPROF_ENCODE_OPENTELEMETRY_ALLOCATION_ERROR;
     }
 
-    for (index = 0 ;
-         index < input_instance->location_index_count ;
-         index++) {
-        otlp_sample->location_index[index] = input_instance->location_index[index];
-    }
-
-    otlp_sample->locations_start_index = input_instance->locations_start_index;
-    otlp_sample->locations_length = input_instance->locations_length;
+    /* stack_index into dictionary stack_table; 0 until dictionary encoding */
+    otlp_sample->stack_index = 0;
 
     for (index = 0 ;
          index < input_instance->value_count ;
          index++) {
-        otlp_sample->value[index] = input_instance->values[index];
+        otlp_sample->values[index] = input_instance->values[index];
     }
 
     for (index = 0 ;
          index < input_instance->attributes_count ;
          index++) {
-        otlp_sample->attributes[index] = input_instance->attributes[index];
+        otlp_sample->attribute_indices[index] = (int32_t) input_instance->attributes[index];
     }
 
-    otlp_sample->link = input_instance->link;
+    otlp_sample->link_index = input_instance->link >= 0 ? (int32_t) input_instance->link : -1;
 
     for (index = 0 ;
          index < input_instance->timestamps_count ;
@@ -1671,22 +1494,13 @@ static int pack_cprof_mapping(
         return CPROF_ENCODE_OPENTELEMETRY_ALLOCATION_ERROR;
     }
 
-    otlp_mapping->id = input_instance->id;
-    otlp_mapping->memory_start = input_instance->memory_start;
-    otlp_mapping->memory_limit = input_instance->memory_limit;
-    otlp_mapping->file_offset = input_instance->file_offset;
-    otlp_mapping->filename = input_instance->filename;
+    otlp_mapping->filename_strindex = 0; /* TODO: resolve via dictionary string_table */
 
     for (index = 0 ;
          index < input_instance->attributes_count ;
          index++) {
-        otlp_mapping->attributes[index] = input_instance->attributes[index];
+        otlp_mapping->attribute_indices[index] = (int32_t) input_instance->attributes[index];
     }
-
-    otlp_mapping->has_functions = input_instance->has_functions;
-    otlp_mapping->has_filenames = input_instance->has_filenames;
-    otlp_mapping->has_line_numbers = input_instance->has_line_numbers;
-    otlp_mapping->has_inline_frames = input_instance->has_inline_frames;
 
     *output_instance = otlp_mapping;
 
@@ -1733,10 +1547,8 @@ static int pack_cprof_location(
         return CPROF_ENCODE_OPENTELEMETRY_ALLOCATION_ERROR;
     }
 
-    otlp_location->id = input_instance->id;
     otlp_location->mapping_index = input_instance->mapping_index;
     otlp_location->address = input_instance->address;
-
 
     index = 0;
     cfl_list_foreach(iterator,
@@ -1746,7 +1558,7 @@ static int pack_cprof_location(
                 struct cprof_line, _head);
 
         result = pack_cprof_line(
-                    &otlp_location->line[index],
+                    &otlp_location->lines[index],
                     line);
 
         if (result != CPROF_ENCODE_OPENTELEMETRY_SUCCESS) {
@@ -1758,12 +1570,10 @@ static int pack_cprof_location(
         index++;
     }
 
-    otlp_location->is_folded = input_instance->is_folded;
-
     for (index = 0 ;
          index < input_instance->attributes_count ;
          index++) {
-        otlp_location->attributes[index] = input_instance->attributes[index];
+        otlp_location->attribute_indices[index] = (int32_t) input_instance->attributes[index];
     }
 
     *output_instance = otlp_location;
@@ -1783,10 +1593,10 @@ static int pack_cprof_function(
         return CPROF_ENCODE_OPENTELEMETRY_ALLOCATION_ERROR;
     }
 
-    otlp_function->id = input_instance->id;
-    otlp_function->name = input_instance->name;
-    otlp_function->system_name = input_instance->system_name;
-    otlp_function->filename = input_instance->filename;
+    /* String fields are now string table indices; use 0 until dictionary encoding */
+    otlp_function->name_strindex = 0;
+    otlp_function->system_name_strindex = 0;
+    otlp_function->filename_strindex = 0;
     otlp_function->start_line = input_instance->start_line;
 
     *output_instance = otlp_function;
@@ -1794,22 +1604,24 @@ static int pack_cprof_function(
     return CPROF_ENCODE_OPENTELEMETRY_SUCCESS;
 }
 
-static int pack_cprof_attribute_unit(
-            Opentelemetry__Proto__Profiles__V1development__AttributeUnit **output_instance,
+static int pack_cprof_keyvalueandunit(
+            Opentelemetry__Proto__Profiles__V1development__KeyValueAndUnit **output_instance,
             struct cprof_attribute_unit *input_instance)
 {
-    Opentelemetry__Proto__Profiles__V1development__AttributeUnit *otlp_attribute_unit;
+    Opentelemetry__Proto__Profiles__V1development__KeyValueAndUnit *otlp_kv;
 
-    otlp_attribute_unit = initialize_attribute_unit();
+    otlp_kv = initialize_keyvalueandunit();
 
-    if (otlp_attribute_unit == NULL) {
+    if (otlp_kv == NULL) {
         return CPROF_ENCODE_OPENTELEMETRY_ALLOCATION_ERROR;
     }
 
-    otlp_attribute_unit->attribute_key = input_instance->attribute_key;
-    otlp_attribute_unit->unit = input_instance->unit;
+    /* key_strindex / unit_strindex require dictionary string_table; use 0 for now */
+    otlp_kv->key_strindex = 0;
+    otlp_kv->unit_strindex = 0;
+    otlp_kv->value = NULL; /* TODO: convert attribute value to AnyValue if needed */
 
-    *output_instance = otlp_attribute_unit;
+    *output_instance = otlp_kv;
 
     return CPROF_ENCODE_OPENTELEMETRY_SUCCESS;
 }
@@ -1864,309 +1676,54 @@ static int pack_cprof_profile(
     Opentelemetry__Proto__Profiles__V1development__Profile *otlp_profile;
     struct cfl_list                                        *iterator;
     struct cprof_sample                                    *sample;
-    struct cprof_link                                      *link;
-    struct cprof_mapping                                   *mapping;
-    struct cprof_location                                  *location;
-    struct cprof_function                                  *function;
     struct cprof_value_type                                *sample_type;
-    struct cprof_attribute_unit                            *attribute_unit;
     int                                                     result;
     size_t                                                  index;
 
-    otlp_profile = initialize_profile(cfl_list_size(&input_instance->sample_type),
-                                      cfl_list_size(&input_instance->samples),
-                                      cfl_list_size(&input_instance->mappings),
-                                      cfl_list_size(&input_instance->locations),
-                                      input_instance->location_indices_count,
-                                      cfl_list_size(&input_instance->functions),
-                                      0,
-                                      cfl_list_size(&input_instance->attribute_units),
-                                      cfl_list_size(&input_instance->link_table),
-                                      input_instance->string_table_count,
-                                      input_instance->comments_count);
+    otlp_profile = initialize_profile(cfl_list_size(&input_instance->samples), 0);
 
     if (otlp_profile == NULL) {
         return CPROF_ENCODE_OPENTELEMETRY_ALLOCATION_ERROR;
     }
 
-    index = 0;
-    cfl_list_foreach(iterator,
-                     &input_instance->sample_type) {
-        sample_type = cfl_list_entry(
-                        iterator,
-                        struct cprof_value_type, _head);
-
-        result = pack_cprof_value_type(
-                    &otlp_profile->sample_type[index],
-                    sample_type);
-
+    /* New Profile has single sample_type; use first from list if any */
+    if (!cfl_list_is_empty(&input_instance->sample_type)) {
+        sample_type = cfl_list_entry_first(&input_instance->sample_type,
+                                           struct cprof_value_type, _head);
+        result = pack_cprof_value_type(&otlp_profile->sample_type, sample_type);
         if (result != CPROF_ENCODE_OPENTELEMETRY_SUCCESS) {
             destroy_profile(otlp_profile);
-
             return result;
         }
-
-        index++;
     }
 
     index = 0;
-    cfl_list_foreach(iterator,
-                     &input_instance->samples) {
-        sample = cfl_list_entry(
-                        iterator,
-                        struct cprof_sample, _head);
-
-        result = pack_cprof_sample(
-                    &otlp_profile->sample[index],
-                    sample);
+    cfl_list_foreach(iterator, &input_instance->samples) {
+        sample = cfl_list_entry(iterator, struct cprof_sample, _head);
+        result = pack_cprof_sample(&otlp_profile->samples[index], sample);
 
         if (result != CPROF_ENCODE_OPENTELEMETRY_SUCCESS) {
             destroy_profile(otlp_profile);
-
             return result;
         }
-
         index++;
     }
 
-    index = 0;
-    cfl_list_foreach(iterator,
-                     &input_instance->mappings) {
-        mapping = cfl_list_entry(
-                        iterator,
-                        struct cprof_mapping, _head);
+    otlp_profile->time_unix_nano = input_instance->time_nanos;
+    otlp_profile->duration_nano = input_instance->duration_nanos;
 
-        result = pack_cprof_mapping(
-                    &otlp_profile->mapping[index],
-                    mapping);
-
-        if (result != CPROF_ENCODE_OPENTELEMETRY_SUCCESS) {
-            destroy_profile(otlp_profile);
-
-            return result;
-        }
-
-        index++;
-    }
-
-    index = 0;
-    cfl_list_foreach(iterator,
-                     &input_instance->locations) {
-        location = cfl_list_entry(
-                        iterator,
-                        struct cprof_location, _head);
-
-        result = pack_cprof_location(
-                    &otlp_profile->location[index],
-                    location);
-
-        if (result != CPROF_ENCODE_OPENTELEMETRY_SUCCESS) {
-            destroy_profile(otlp_profile);
-
-            return result;
-        }
-
-        index++;
-    }
-
-    for (index = 0 ;
-         index < input_instance->location_indices_count ;
-         index++) {
-        otlp_profile->location_indices[index] = input_instance->location_indices[index];
-    }
-
-    index = 0;
-    cfl_list_foreach(iterator,
-                     &input_instance->functions) {
-        function = cfl_list_entry(
-                        iterator,
-                        struct cprof_function, _head);
-
-        result = pack_cprof_function(
-                    &otlp_profile->function[index],
-                    function);
-
-        if (result != CPROF_ENCODE_OPENTELEMETRY_SUCCESS) {
-            destroy_profile(otlp_profile);
-
-            return result;
-        }
-
-        index++;
-    }
-
-    if (input_instance->attribute_table != NULL) {
-        otlp_profile->attribute_table = cfl_kvlist_to_otlp_kvpair_list(input_instance->attribute_table);
-
-        if (otlp_profile->attribute_table == NULL) {
-            destroy_profile(otlp_profile);
-
-            return CPROF_ENCODE_OPENTELEMETRY_ALLOCATION_ERROR;
-        }
-
-        otlp_profile->n_attribute_table = cfl_kvlist_count(input_instance->attribute_table);
-    }
-
-    index = 0;
-    cfl_list_foreach(iterator,
-                     &input_instance->attribute_units) {
-        attribute_unit = cfl_list_entry(
-                            iterator,
-                            struct cprof_attribute_unit, _head);
-
-        result = pack_cprof_attribute_unit(
-                    &otlp_profile->attribute_units[index],
-                    attribute_unit);
-
-        if (result != CPROF_ENCODE_OPENTELEMETRY_SUCCESS) {
-            destroy_profile(otlp_profile);
-
-            return result;
-        }
-
-        index++;
-    }
-
-    index = 0;
-    cfl_list_foreach(iterator,
-                     &input_instance->link_table) {
-        link = cfl_list_entry(
-                iterator,
-                struct cprof_link, _head);
-
-        result = pack_cprof_link(
-                    &otlp_profile->link_table[index],
-                    link);
-
-        if (result != CPROF_ENCODE_OPENTELEMETRY_SUCCESS) {
-            destroy_profile(otlp_profile);
-
-            return result;
-        }
-
-        index++;
-    }
-
-    for (index = 0 ;
-         index < input_instance->string_table_count ;
-         index++) {
-        otlp_profile->string_table[index] = cfl_sds_create(input_instance->string_table[index]);
-
-        if (otlp_profile->string_table[index] == NULL) {
-            destroy_profile(otlp_profile);
-
-            return CPROF_ENCODE_OPENTELEMETRY_ALLOCATION_ERROR;
-        }
-    }
-
-    otlp_profile->drop_frames = input_instance->drop_frames;
-    otlp_profile->keep_frames = input_instance->keep_frames;
-    otlp_profile->time_nanos = input_instance->time_nanos;
-    otlp_profile->duration_nanos = input_instance->duration_nanos;
-
-    result = pack_cprof_value_type(
-                &otlp_profile->period_type,
-                &input_instance->period_type);
-
+    result = pack_cprof_value_type(&otlp_profile->period_type, &input_instance->period_type);
     if (result != CPROF_ENCODE_OPENTELEMETRY_SUCCESS) {
         destroy_profile(otlp_profile);
-
         return result;
     }
 
     otlp_profile->period = input_instance->period;
 
-    for (index = 0 ;
-         index < input_instance->comments_count ;
-         index++) {
-        otlp_profile->comment[index] = input_instance->comments[index];
-    }
-
-    otlp_profile->default_sample_type = input_instance->default_sample_type;
-
-    *output_instance =  otlp_profile;
+    *output_instance = otlp_profile;
 
     return CPROF_ENCODE_OPENTELEMETRY_SUCCESS;
 }
-
-static int pack_cprof_profile_container(
-            Opentelemetry__Proto__Profiles__V1development__ProfileContainer **output_instance,
-            struct cprof_profile *input_instance)
-{
-    Opentelemetry__Proto__Profiles__V1development__ProfileContainer *otlp_profile_container;
-    int                                                              result;
-
-    otlp_profile_container = initialize_profile_container(0);
-
-    if (otlp_profile_container == NULL) {
-        return CPROF_ENCODE_OPENTELEMETRY_ALLOCATION_ERROR;
-    }
-
-    otlp_profile_container->profile_id.data = \
-        (uint8_t *) cfl_sds_create_len((const char *) input_instance->profile_id,
-                                       sizeof(input_instance->profile_id));
-
-    if (otlp_profile_container->profile_id.data == NULL) {
-        destroy_profile_container(otlp_profile_container);
-
-        return CPROF_ENCODE_OPENTELEMETRY_ALLOCATION_ERROR;
-    }
-
-    otlp_profile_container->profile_id.len = sizeof(input_instance->profile_id);
-
-    otlp_profile_container->start_time_unix_nano = (uint64_t) input_instance->start_time_unix_nano;
-    otlp_profile_container->end_time_unix_nano = (uint64_t) input_instance->end_time_unix_nano;
-
-    otlp_profile_container->attributes = cfl_kvlist_to_otlp_kvpair_list(input_instance->attributes);
-
-    if (otlp_profile_container->attributes == NULL) {
-        destroy_profile_container(otlp_profile_container);
-
-        return CPROF_ENCODE_OPENTELEMETRY_ALLOCATION_ERROR;
-    }
-
-    otlp_profile_container->n_attributes = cfl_kvlist_count(input_instance->attributes);
-
-    otlp_profile_container->dropped_attributes_count = input_instance->dropped_attributes_count;
-
-    if (input_instance->original_payload_format != NULL) {
-        otlp_profile_container->original_payload_format = \
-            cfl_sds_create(input_instance->original_payload_format);
-
-        if (otlp_profile_container->original_payload_format == NULL) {
-            destroy_profile_container(otlp_profile_container);
-
-            return CPROF_ENCODE_OPENTELEMETRY_ALLOCATION_ERROR;
-        }
-    }
-
-    if (input_instance->original_payload != NULL) {
-        otlp_profile_container->original_payload.data = \
-            (uint8_t *) cfl_sds_create_len(input_instance->original_payload,
-                                           cfl_sds_len(input_instance->original_payload));
-
-        if (otlp_profile_container->original_payload.data == NULL) {
-            destroy_profile_container(otlp_profile_container);
-
-            return CPROF_ENCODE_OPENTELEMETRY_ALLOCATION_ERROR;
-        }
-
-        otlp_profile_container->original_payload.len = cfl_sds_len(input_instance->original_payload);
-    }
-
-    result = pack_cprof_profile(&otlp_profile_container->profile, input_instance);
-
-    if (result != CPROF_ENCODE_OPENTELEMETRY_SUCCESS) {
-        destroy_profile_container(otlp_profile_container);
-
-        return result;
-    }
-
-    *output_instance = otlp_profile_container;
-
-    return CPROF_ENCODE_OPENTELEMETRY_SUCCESS;
-}
-
 
 static int pack_cprof_scope_profiles(
             Opentelemetry__Proto__Profiles__V1development__ScopeProfiles **output_instance,
@@ -2199,7 +1756,7 @@ static int pack_cprof_scope_profiles(
                     iterator,
                     struct cprof_profile, _head);
 
-        result = pack_cprof_profile_container(
+        result = pack_cprof_profile(
                     &otlp_scope_profiles->profiles[index],
                     profile);
 
