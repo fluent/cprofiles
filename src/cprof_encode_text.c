@@ -132,6 +132,7 @@ static int encode_cprof_value_type(
 
 static int encode_cprof_sample(
                 struct cprof_text_encoding_context *context,
+                struct cprof_profile *profile,
                 struct cprof_sample *instance);
 
 static int encode_cprof_mapping(
@@ -473,6 +474,106 @@ static const char *resolve_string_index(struct cprof_profile *profile, int64_t i
     return profile->string_table[index];
 }
 
+static struct cprof_mapping *resolve_mapping_index(struct cprof_profile *profile, uint64_t index)
+{
+    struct cfl_list      *iterator;
+    struct cprof_mapping *mapping;
+    uint64_t              current_index;
+
+    if (profile == NULL) {
+        return NULL;
+    }
+
+    current_index = 0;
+
+    cfl_list_foreach(iterator, &profile->mappings) {
+        mapping = cfl_list_entry(iterator, struct cprof_mapping, _head);
+
+        if (current_index == index) {
+            return mapping;
+        }
+
+        current_index++;
+    }
+
+    return NULL;
+}
+
+static struct cprof_location *resolve_location_index(struct cprof_profile *profile, uint64_t index)
+{
+    struct cfl_list       *iterator;
+    struct cprof_location *location;
+    uint64_t               current_index;
+
+    if (profile == NULL) {
+        return NULL;
+    }
+
+    current_index = 0;
+
+    cfl_list_foreach(iterator, &profile->locations) {
+        location = cfl_list_entry(iterator, struct cprof_location, _head);
+
+        if (current_index == index) {
+            return location;
+        }
+
+        current_index++;
+    }
+
+    return NULL;
+}
+
+static struct cprof_function *resolve_function_index(struct cprof_profile *profile, uint64_t index)
+{
+    struct cfl_list       *iterator;
+    struct cprof_function *function;
+    uint64_t               current_index;
+
+    if (profile == NULL) {
+        return NULL;
+    }
+
+    current_index = 0;
+
+    cfl_list_foreach(iterator, &profile->functions) {
+        function = cfl_list_entry(iterator, struct cprof_function, _head);
+
+        if (current_index == index) {
+            return function;
+        }
+
+        current_index++;
+    }
+
+    return NULL;
+}
+
+static struct cfl_kvpair *resolve_attribute_index(struct cprof_profile *profile, uint64_t index)
+{
+    struct cfl_list   *iterator;
+    struct cfl_kvpair *entry;
+    uint64_t           current_index;
+
+    if (profile == NULL || profile->attribute_table == NULL) {
+        return NULL;
+    }
+
+    current_index = 0;
+
+    cfl_list_foreach(iterator, &profile->attribute_table->list) {
+        entry = cfl_list_entry(iterator, struct cfl_kvpair, _head);
+
+        if (current_index == index) {
+            return entry;
+        }
+
+        current_index++;
+    }
+
+    return NULL;
+}
+
 /* Append string to buffer with double-quotes escaped as \". */
 static int append_escaped_string(cfl_sds_t *buf, const char *str)
 {
@@ -519,6 +620,36 @@ static int encode_int64_string_ref(
         local_indentation = (char *) "";
     }
 
+    resolved = resolve_string_index(profile, value);
+
+    if (context->render_mode == CPROF_ENCODE_TEXT_RENDER_RESOLVED &&
+        resolved != NULL) {
+        result = cfl_sds_printf(&context->output_buffer,
+                                "%s%s\"",
+                                local_indentation,
+                                label);
+
+        if (result == NULL) {
+            return CPROF_ENCODE_TEXT_ALLOCATION_ERROR;
+        }
+
+        context->output_buffer = result;
+
+        append_result = append_escaped_string(&context->output_buffer, resolved);
+        if (append_result != CPROF_ENCODE_TEXT_SUCCESS) {
+            return append_result;
+        }
+
+        result = cfl_sds_cat(context->output_buffer, "\"\n", 2);
+        if (result == NULL) {
+            return CPROF_ENCODE_TEXT_ALLOCATION_ERROR;
+        }
+
+        context->output_buffer = result;
+
+        return CPROF_ENCODE_TEXT_SUCCESS;
+    }
+
     result = cfl_sds_printf(&context->output_buffer,
                             "%s%s%" PRId64,
                             local_indentation,
@@ -529,9 +660,10 @@ static int encode_int64_string_ref(
         return CPROF_ENCODE_TEXT_ALLOCATION_ERROR;
     }
 
-    resolved = resolve_string_index(profile, value);
     if (resolved != NULL) {
-        result = cfl_sds_cat(context->output_buffer, " → \"", 4);
+        result = cfl_sds_cat(context->output_buffer,
+                             " → \"",
+                             strlen(" → \""));
         if (result == NULL) {
             return CPROF_ENCODE_TEXT_ALLOCATION_ERROR;
         }
@@ -720,6 +852,206 @@ static int encode_uint64_t_array(
     return CPROF_ENCODE_TEXT_SUCCESS;
 }
 
+static int encode_attribute_index_array(
+                struct cprof_text_encoding_context *context,
+                int indent,
+                char *prefix,
+                char *separator,
+                char *suffix,
+                struct cprof_profile *profile,
+                uint64_t *data_list,
+                size_t data_length)
+{
+    char               *local_indentation;
+    cfl_sds_t           sds_result;
+    int                 result;
+    size_t              index;
+    struct cfl_kvpair  *attribute;
+    int                 placeholder_attribute;
+
+    if (context->render_mode != CPROF_ENCODE_TEXT_RENDER_RESOLVED) {
+        return encode_uint64_t_array(context, indent, prefix, separator, suffix,
+                                     data_list, data_length);
+    }
+
+    if (indent) {
+        local_indentation = (char *) context->indentation_buffer;
+    }
+    else {
+        local_indentation = (char *) "";
+    }
+
+    sds_result = cfl_sds_printf(&context->output_buffer,
+                                "%s" "%s",
+                                local_indentation,
+                                prefix);
+
+    if (sds_result == NULL) {
+        return CPROF_ENCODE_TEXT_ALLOCATION_ERROR;
+    }
+
+    for (index = 0; index < data_length; index++) {
+        attribute = resolve_attribute_index(profile, data_list[index]);
+        placeholder_attribute = CFL_FALSE;
+
+        if (attribute != NULL &&
+            attribute->key != NULL &&
+            attribute->key[0] == '\0' &&
+            attribute->val != NULL &&
+            attribute->val->type == CFL_VARIANT_STRING &&
+            attribute->val->data.as_string != NULL &&
+            cfl_sds_len(attribute->val->data.as_string) == 0) {
+            placeholder_attribute = CFL_TRUE;
+        }
+
+        if (attribute == NULL || attribute->val == NULL || placeholder_attribute) {
+            result = encode_uint64_t(context,
+                                     CFL_FALSE,
+                                     "<missing:",
+                                     ">",
+                                     data_list[index]);
+        }
+        else {
+            result = encode_string(context,
+                                   CFL_FALSE,
+                                   "\"",
+                                   "\": ",
+                                   attribute->key);
+            if (result != CPROF_ENCODE_TEXT_SUCCESS) {
+                return result;
+            }
+
+            result = encode_cfl_variant(context,
+                                        CFL_FALSE,
+                                        "",
+                                        "",
+                                        attribute->val);
+        }
+
+        if (result != CPROF_ENCODE_TEXT_SUCCESS) {
+            return result;
+        }
+
+        if (index + 1 < data_length) {
+            result = encode_string(context,
+                                   CFL_FALSE,
+                                   "",
+                                   "",
+                                   separator);
+            if (result != CPROF_ENCODE_TEXT_SUCCESS) {
+                return result;
+            }
+        }
+    }
+
+    sds_result = cfl_sds_printf(&context->output_buffer, "%s", suffix);
+    if (sds_result == NULL) {
+        return CPROF_ENCODE_TEXT_ALLOCATION_ERROR;
+    }
+
+    return CPROF_ENCODE_TEXT_SUCCESS;
+}
+
+static int encode_location_reference_array(
+                struct cprof_text_encoding_context *context,
+                int indent,
+                char *prefix,
+                char *separator,
+                char *suffix,
+                struct cprof_profile *profile,
+                uint64_t *data_list,
+                size_t data_length)
+{
+    char                  *local_indentation;
+    cfl_sds_t              sds_result;
+    int                    result;
+    size_t                 index;
+    struct cprof_location *location;
+    struct cprof_line     *line;
+    struct cprof_function *function;
+    const char            *resolved;
+
+    if (context->render_mode != CPROF_ENCODE_TEXT_RENDER_RESOLVED) {
+        return encode_uint64_t_array(context, indent, prefix, separator, suffix,
+                                     data_list, data_length);
+    }
+
+    if (indent) {
+        local_indentation = (char *) context->indentation_buffer;
+    }
+    else {
+        local_indentation = (char *) "";
+    }
+
+    sds_result = cfl_sds_printf(&context->output_buffer,
+                                "%s" "%s",
+                                local_indentation,
+                                prefix);
+    if (sds_result == NULL) {
+        return CPROF_ENCODE_TEXT_ALLOCATION_ERROR;
+    }
+
+    for (index = 0; index < data_length; index++) {
+        location = resolve_location_index(profile, data_list[index]);
+
+        if (location == NULL || cfl_list_is_empty(&location->lines)) {
+            result = encode_uint64_t(context,
+                                     CFL_FALSE,
+                                     "",
+                                     "",
+                                     data_list[index]);
+        }
+        else {
+            line = cfl_list_entry_first(&location->lines, struct cprof_line, _head);
+            function = resolve_function_index(profile, line->function_index);
+
+            if (function != NULL) {
+                resolved = resolve_string_index(profile, function->name);
+            }
+            else {
+                resolved = NULL;
+            }
+
+            if (resolved == NULL) {
+                result = encode_uint64_t(context,
+                                         CFL_FALSE,
+                                         "",
+                                         "",
+                                         data_list[index]);
+            }
+            else {
+                result = encode_string(context,
+                                       CFL_FALSE,
+                                       "\"",
+                                       "\"",
+                                       (char *) resolved);
+            }
+        }
+
+        if (result != CPROF_ENCODE_TEXT_SUCCESS) {
+            return result;
+        }
+
+        if (index + 1 < data_length) {
+            result = encode_string(context,
+                                   CFL_FALSE,
+                                   "",
+                                   "",
+                                   separator);
+            if (result != CPROF_ENCODE_TEXT_SUCCESS) {
+                return result;
+            }
+        }
+    }
+
+    sds_result = cfl_sds_printf(&context->output_buffer, "%s", suffix);
+    if (sds_result == NULL) {
+        return CPROF_ENCODE_TEXT_ALLOCATION_ERROR;
+    }
+
+    return CPROF_ENCODE_TEXT_SUCCESS;
+}
+
 static int encode_int64_t_array(
                 struct cprof_text_encoding_context *context,
                 int indent,
@@ -855,6 +1187,8 @@ static int encode_cfl_kvlist(
     struct cfl_kvpair *last_entry;
     cfl_sds_t          sds_result;
     struct cfl_list   *iterator;
+    char              *value_prefix;
+    char              *value_suffix;
     int                result;
     struct cfl_kvpair *entry;
 
@@ -893,10 +1227,20 @@ static int encode_cfl_kvlist(
             return result;
         }
 
+        value_prefix = "";
+        value_suffix = "";
+
+        if (entry->val != NULL &&
+            (entry->val->type == CFL_VARIANT_STRING ||
+             entry->val->type == CFL_VARIANT_BYTES)) {
+            value_prefix = "\"";
+            value_suffix = "\"";
+        }
+
         result = encode_cfl_variant(context,
                                     CFL_FALSE,
-                                    "\"",
-                                    "\"",
+                                    value_prefix,
+                                    value_suffix,
                                     entry->val);
 
         if (result != CPROF_ENCODE_TEXT_SUCCESS) {
@@ -1112,16 +1456,18 @@ static int encode_cprof_value_type(
 
 static int encode_cprof_sample(
                 struct cprof_text_encoding_context *context,
+                struct cprof_profile *profile,
                 struct cprof_sample *instance) {
     int result;
 
-    result = encode_uint64_t_array(context,
-                                   CFL_TRUE,
-                                   "Location index : [ ",
-                                   ", ",
-                                   "]\n",
-                                   instance->location_index,
-                                   instance->location_index_count);
+    result = encode_location_reference_array(context,
+                                             CFL_TRUE,
+                                             "Location index : [ ",
+                                             ", ",
+                                             "]\n",
+                                             profile,
+                                             instance->location_index,
+                                             instance->location_index_count);
 
     if (result != CPROF_ENCODE_TEXT_SUCCESS) {
         return result;
@@ -1159,13 +1505,14 @@ static int encode_cprof_sample(
         return result;
     }
 
-    result = encode_uint64_t_array(context,
-                                   CFL_TRUE,
-                                   "Attributes : [ ",
-                                   ", ",
-                                   "]\n",
-                                   instance->attributes,
-                                   instance->attributes_count);
+    result = encode_attribute_index_array(context,
+                                          CFL_TRUE,
+                                          "Attributes : [ ",
+                                          ", ",
+                                          "]\n",
+                                          profile,
+                                          instance->attributes,
+                                          instance->attributes_count);
 
     if (result != CPROF_ENCODE_TEXT_SUCCESS) {
         return result;
@@ -1262,13 +1609,14 @@ static int encode_cprof_mapping(
         return result;
     }
 
-    result = encode_uint64_t_array(context,
-                                   CFL_TRUE,
-                                   "Attributes : [ ",
-                                   ", ",
-                                   "]\n",
-                                   instance->attributes,
-                                   instance->attributes_count);
+    result = encode_attribute_index_array(context,
+                                          CFL_TRUE,
+                                          "Attributes : [ ",
+                                          ", ",
+                                          "]\n",
+                                          profile,
+                                          instance->attributes,
+                                          instance->attributes_count);
 
     if (result != CPROF_ENCODE_TEXT_SUCCESS) {
         return result;
@@ -1326,13 +1674,42 @@ static int encode_cprof_line(
                 struct cprof_profile *profile,
                 struct cprof_line *instance)
 {
+    struct cprof_function *function;
+    const char            *resolved;
     int result;
 
-    result = encode_int64_string_ref(context,
-                                    CFL_TRUE,
-                                    "Function index : ",
-                                    (int64_t) instance->function_index,
-                                    profile);
+    if (context->render_mode == CPROF_ENCODE_TEXT_RENDER_RESOLVED) {
+        function = resolve_function_index(profile, instance->function_index);
+
+        if (function != NULL) {
+            resolved = resolve_string_index(profile, function->name);
+        }
+        else {
+            resolved = NULL;
+        }
+
+        if (resolved != NULL) {
+            result = encode_string(context,
+                                   CFL_TRUE,
+                                   "Function : ",
+                                   "\n",
+                                   (char *) resolved);
+        }
+        else {
+            result = encode_uint64_t(context,
+                                     CFL_TRUE,
+                                     "Function index : ",
+                                     "\n",
+                                     instance->function_index);
+        }
+    }
+    else {
+        result = encode_uint64_t(context,
+                                 CFL_TRUE,
+                                 "Function index : ",
+                                 "\n",
+                                 instance->function_index);
+    }
 
     if (result != CPROF_ENCODE_TEXT_SUCCESS) {
         return result;
@@ -1369,6 +1746,8 @@ static int encode_cprof_location(
                 struct cprof_location *instance)
 {
     struct cfl_list   *iterator;
+    struct cprof_mapping *mapping;
+    const char           *resolved;
     int                result;
     struct cprof_line *line;
 
@@ -1382,11 +1761,38 @@ static int encode_cprof_location(
         return result;
     }
 
-    result = encode_uint64_t(context,
-                             CFL_TRUE,
-                             "Mapping index : ",
-                             "\n",
-                             instance->mapping_index);
+    if (context->render_mode == CPROF_ENCODE_TEXT_RENDER_RESOLVED) {
+        mapping = resolve_mapping_index(profile, instance->mapping_index);
+
+        if (mapping != NULL) {
+            resolved = resolve_string_index(profile, mapping->filename);
+        }
+        else {
+            resolved = NULL;
+        }
+
+        if (resolved != NULL) {
+            result = encode_string(context,
+                                   CFL_TRUE,
+                                   "Mapping : ",
+                                   "\n",
+                                   (char *) resolved);
+        }
+        else {
+            result = encode_uint64_t(context,
+                                     CFL_TRUE,
+                                     "Mapping index : ",
+                                     "\n",
+                                     instance->mapping_index);
+        }
+    }
+    else {
+        result = encode_uint64_t(context,
+                                 CFL_TRUE,
+                                 "Mapping index : ",
+                                 "\n",
+                                 instance->mapping_index);
+    }
 
     if (result != CPROF_ENCODE_TEXT_SUCCESS) {
         return result;
@@ -1438,13 +1844,14 @@ static int encode_cprof_location(
         }
     }
 
-    result = encode_uint64_t_array(context,
-                                   CFL_TRUE,
-                                   "Attributes : [ ",
-                                   ", ",
-                                   "]\n",
-                                   instance->attributes,
-                                   instance->attributes_count);
+    result = encode_attribute_index_array(context,
+                                          CFL_TRUE,
+                                          "Attributes : [ ",
+                                          ", ",
+                                          "]\n",
+                                          profile,
+                                          instance->attributes,
+                                          instance->attributes_count);
 
     if (result != CPROF_ENCODE_TEXT_SUCCESS) {
         return result;
@@ -1717,7 +2124,7 @@ static int encode_cprof_profile(
                     return result;
                 }
 
-                result = encode_cprof_sample(context, sample);
+                result = encode_cprof_sample(context, instance, sample);
 
                 if (result != CPROF_ENCODE_TEXT_SUCCESS) {
                     return result;
@@ -1856,16 +2263,18 @@ static int encode_cprof_profile(
         }
     }
 
-    result = encode_int64_t_array(context,
-                                  CFL_TRUE,
-                                  "Location indices : [ ",
-                                  ", ",
-                                  "]\n",
-                                  instance->location_indices,
-                                  instance->location_indices_count);
+    if (context->render_mode == CPROF_ENCODE_TEXT_RENDER_DICTIONARIES_AND_INDEXES) {
+        result = encode_int64_t_array(context,
+                                      CFL_TRUE,
+                                      "Location indices : [ ",
+                                      ", ",
+                                      "]\n",
+                                      instance->location_indices,
+                                      instance->location_indices_count);
 
-    if (result != CPROF_ENCODE_TEXT_SUCCESS) {
-        return result;
+        if (result != CPROF_ENCODE_TEXT_SUCCESS) {
+            return result;
+        }
     }
 
     if (!cfl_list_is_empty(&instance->functions)) {
@@ -1926,49 +2335,51 @@ static int encode_cprof_profile(
         }
     }
 
-    result = encode_cfl_kvlist(context,
-                               CFL_TRUE,
-                               "Attribute table : {",
-                               ", ",
-                               " }\n",
-                               instance->attribute_table);
-
-    if (result != CPROF_ENCODE_TEXT_SUCCESS) {
-        return result;
-    }
-
-    if (!cfl_list_is_empty(&instance->attribute_units)) {
-        result = encode_section_header_with_count(context,
-                                                 "Attribute units",
-                                                 cfl_list_size(&instance->attribute_units));
+    if (context->render_mode == CPROF_ENCODE_TEXT_RENDER_DICTIONARIES_AND_INDEXES) {
+        result = encode_cfl_kvlist(context,
+                                   CFL_TRUE,
+                                   "Attribute table : {",
+                                   ", ",
+                                   " }\n",
+                                   instance->attribute_table);
 
         if (result != CPROF_ENCODE_TEXT_SUCCESS) {
             return result;
         }
 
-        result = increment_indentation_level(context);
-
-        if (result != CPROF_ENCODE_TEXT_SUCCESS) {
-            return result;
-        }
-
-        cfl_list_foreach(iterator,
-                         &instance->attribute_units) {
-            attribute_unit = cfl_list_entry(
-                                iterator,
-                                struct cprof_attribute_unit, _head);
-
-            result = encode_cprof_attribute_unit(context, attribute_unit);
+        if (!cfl_list_is_empty(&instance->attribute_units)) {
+            result = encode_section_header_with_count(context,
+                                                     "Attribute units",
+                                                     cfl_list_size(&instance->attribute_units));
 
             if (result != CPROF_ENCODE_TEXT_SUCCESS) {
                 return result;
             }
-        }
 
-        result = decrement_indentation_level(context);
+            result = increment_indentation_level(context);
 
-        if (result != CPROF_ENCODE_TEXT_SUCCESS) {
-            return result;
+            if (result != CPROF_ENCODE_TEXT_SUCCESS) {
+                return result;
+            }
+
+            cfl_list_foreach(iterator,
+                             &instance->attribute_units) {
+                attribute_unit = cfl_list_entry(
+                                    iterator,
+                                    struct cprof_attribute_unit, _head);
+
+                result = encode_cprof_attribute_unit(context, attribute_unit);
+
+                if (result != CPROF_ENCODE_TEXT_SUCCESS) {
+                    return result;
+                }
+            }
+
+            result = decrement_indentation_level(context);
+
+            if (result != CPROF_ENCODE_TEXT_SUCCESS) {
+                return result;
+            }
         }
     }
 
@@ -2030,41 +2441,43 @@ static int encode_cprof_profile(
         }
     }
 
-    result = encode_section_header_with_count(context,
-                                             "String table",
-                                             instance->string_table_count);
+    if (context->render_mode == CPROF_ENCODE_TEXT_RENDER_DICTIONARIES_AND_INDEXES) {
+        result = encode_section_header_with_count(context,
+                                                 "String table",
+                                                 instance->string_table_count);
 
-    if (result != CPROF_ENCODE_TEXT_SUCCESS) {
-        return result;
-    }
+        if (result != CPROF_ENCODE_TEXT_SUCCESS) {
+            return result;
+        }
 
-    result = increment_indentation_level(context);
+        result = increment_indentation_level(context);
 
-    if (result != CPROF_ENCODE_TEXT_SUCCESS) {
-        return result;
-    }
+        if (result != CPROF_ENCODE_TEXT_SUCCESS) {
+            return result;
+        }
 
-    result = encode_string_array(
-                context,
-                CFL_TRUE,
-                "[ ",
-                ", ",
-                " ]\n",
-                (char **) instance->string_table,
-                instance->string_table_count);
+        result = encode_string_array(
+                    context,
+                    CFL_TRUE,
+                    "[ ",
+                    ", ",
+                    " ]\n",
+                    (char **) instance->string_table,
+                    instance->string_table_count);
 
-    if (result != CPROF_ENCODE_TEXT_SUCCESS) {
-        return result;
-    }
+        if (result != CPROF_ENCODE_TEXT_SUCCESS) {
+            return result;
+        }
 
-    result = decrement_indentation_level(context);
+        result = decrement_indentation_level(context);
 
-    if (result != CPROF_ENCODE_TEXT_SUCCESS) {
-        return result;
-    }
+        if (result != CPROF_ENCODE_TEXT_SUCCESS) {
+            return result;
+        }
 
-    if (result != CPROF_ENCODE_TEXT_SUCCESS) {
-        return result;
+        if (result != CPROF_ENCODE_TEXT_SUCCESS) {
+            return result;
+        }
     }
 
     result = encode_int64_t(context,
@@ -2518,7 +2931,8 @@ void print_profile(struct cprof_profile *profile)
 
 
 int cprof_encode_text_create(cfl_sds_t *result_buffer,
-                             struct cprof *profile)
+                             struct cprof *profile,
+                             int render_mode)
 {
     int                                 result;
     struct cprof_text_encoding_context  context;
@@ -2526,6 +2940,11 @@ int cprof_encode_text_create(cfl_sds_t *result_buffer,
     struct cprof_resource_profiles     *resource_profiles;
 
     memset(&context, 0, sizeof(context));
+
+    if (render_mode != CPROF_ENCODE_TEXT_RENDER_DICTIONARIES_AND_INDEXES &&
+        render_mode != CPROF_ENCODE_TEXT_RENDER_RESOLVED) {
+        return CPROF_ENCODE_TEXT_INVALID_ARGUMENT_ERROR;
+    }
 
     context.output_buffer = cfl_sds_create_size(128);
 
@@ -2535,7 +2954,7 @@ int cprof_encode_text_create(cfl_sds_t *result_buffer,
 
     context.indentation_buffer = cfl_sds_create_size(256);
 
-    if (context.output_buffer == NULL) {
+    if (context.indentation_buffer == NULL) {
         cfl_sds_destroy(context.output_buffer);
 
         return CPROF_ENCODE_TEXT_ALLOCATION_ERROR;
@@ -2547,6 +2966,7 @@ int cprof_encode_text_create(cfl_sds_t *result_buffer,
 
     context.indentation_level_size = 4;
     context.indentation_character = ' ';
+    context.render_mode = render_mode;
 
 
     if (!cfl_list_is_empty(&profile->profiles)) {
