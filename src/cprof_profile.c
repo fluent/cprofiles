@@ -106,6 +106,14 @@ void cprof_profile_destroy(struct cprof_profile *instance)
     size_t                       index;
     struct cprof_link           *link;
 
+    if (instance == NULL) {
+        return;
+    }
+
+    if (cfl_list_entry_is_orphan(&instance->_head) == CFL_FALSE) {
+        cfl_list_del(&instance->_head);
+    }
+
     if (instance->attributes != NULL) {
         cfl_kvlist_destroy(instance->attributes);
     }
