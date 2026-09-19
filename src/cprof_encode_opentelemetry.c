@@ -92,7 +92,7 @@ static inline void otlp_any_value_destroy(Opentelemetry__Proto__Common__V1__AnyV
 {
     if (value != NULL) {
         if (value->value_case == OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_STRING_VALUE) {
-            if (value->string_value != NULL) {
+            if (is_string_releaseable(value->string_value)) {
                 free(value->string_value);
             }
         }
@@ -546,16 +546,7 @@ static Opentelemetry__Proto__Common__V1__KeyValue **
 static void destroy_attribute(Opentelemetry__Proto__Common__V1__KeyValue *attribute)
 {
     if (attribute != NULL) {
-        if (attribute->value != NULL) {
-            if (attribute->value->value_case == \
-                OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_STRING_VALUE) {
-                if (is_string_releaseable(attribute->value->string_value)) {
-                    free(attribute->value->string_value);
-                }
-            }
-
-            free(attribute->value);
-        }
+        otlp_any_value_destroy(attribute->value);
 
         if (is_string_releaseable(attribute->key)) {
             free(attribute->key);
