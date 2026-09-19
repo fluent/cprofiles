@@ -1533,7 +1533,71 @@ static void test_decoder_rejects_invalid_sample_link_reference()
         request, NULL);
 }
 
+
+static void check_otlp_depth(size_t depth, int shape)
+{
+    struct cprof *original;
+    struct cprof *decoded;
+    struct cprof_resource_profiles *resource;
+    struct cfl_variant *value;
+    struct cfl_variant *parent;
+    struct cfl_kvlist *map;
+    struct cfl_array *array;
+    cfl_sds_t wire;
+    size_t index;
+    size_t offset;
+    int result;
+
+    original = create_minimal_cprof();
+    TEST_ASSERT(original != NULL);
+    resource = cfl_list_entry(original->profiles.next, struct cprof_resource_profiles, _head);
+    value = cfl_variant_create_from_string("leaf");
+    TEST_ASSERT(value != NULL);
+    for (index = 0; index < depth; index++) {
+        if (shape == 0 || (shape == 2 && index % 2 == 0)) {
+            map = cfl_kvlist_create();
+            TEST_ASSERT(map != NULL);
+            TEST_ASSERT(cfl_kvlist_insert(map, "k", value) == 0);
+            parent = cfl_variant_create_from_kvlist(map);
+        }
+        else {
+            array = cfl_array_create(1);
+            TEST_ASSERT(array != NULL);
+            TEST_ASSERT(cfl_array_append(array, value) == 0);
+            parent = cfl_variant_create_from_array(array);
+        }
+        TEST_ASSERT(parent != NULL);
+        value = parent;
+    }
+    TEST_ASSERT(cfl_kvlist_insert(resource->resource->attributes, "deep", value) == 0);
+    TEST_ASSERT(cprof_encode_opentelemetry_create(&wire, original) == 0);
+    TEST_ASSERT(wire != NULL);
+    cprof_destroy(original);
+    decoded = NULL;
+    offset = 0;
+    result = cprof_decode_opentelemetry_create(&decoded, (unsigned char *) wire,
+                                               cfl_sds_len(wire), &offset);
+    TEST_CHECK((result == 0) == (depth < 32));
+    if (decoded != NULL) {
+        cprof_destroy(decoded);
+    }
+    cprof_encode_opentelemetry_destroy(wire);
+}
+
+static void test_otlp_depth_boundary(void)
+{
+    int shape;
+
+    for (shape = 0; shape < 3; shape++) {
+        check_otlp_depth(8, shape);
+        check_otlp_depth(31, shape);
+        check_otlp_depth(32, shape);
+        check_otlp_depth(400, shape);
+    }
+}
+
 TEST_LIST = {
+    {"otlp_depth_boundary", test_otlp_depth_boundary},
     {"encoder", test_encoder},
     {"decoder", test_decoder},
     {"encoder_dictionary_tables", test_encoder_dictionary_tables},
