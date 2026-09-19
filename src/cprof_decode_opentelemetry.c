@@ -535,7 +535,7 @@ static int decode_profile_entry(struct cprof_profile *profile,
                 result = clone_variant(&indexed_attribute_value,
                                        indexed_attribute_entry->value,
                                        dictionary->string_table,
-                                       dictionary->n_string_table);
+                                       dictionary->n_string_table, 1);
 
                 if (result != CPROF_DECODE_OPENTELEMETRY_SUCCESS) {
                     return result;
