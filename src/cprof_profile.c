@@ -258,6 +258,9 @@ size_t cprof_profile_string_add(struct cprof_profile *profile, char *str, int st
         /* string_table[0] must always be "" */
         profile->string_table[0] = cfl_sds_create_len("", 0);
         if (!profile->string_table[0]) {
+            free(profile->string_table);
+            profile->string_table = NULL;
+            profile->string_table_size = 0;
             return -1;
         }
         profile->string_table_count = 1;
