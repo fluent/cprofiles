@@ -1675,6 +1675,131 @@ static void test_decoder_rejects_invalid_sample_link_reference()
 }
 
 
+static void test_decoder_argument_validation(void)
+{
+    unsigned char input[] = {0xff};
+    struct cprof *context;
+    size_t offset;
+    int result;
+
+    context = NULL;
+    offset = 0;
+    result = cprof_decode_opentelemetry_create(NULL, input, sizeof(input), &offset);
+    TEST_CHECK(result == CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR);
+    result = cprof_decode_opentelemetry_create(&context, NULL, sizeof(input), &offset);
+    TEST_CHECK(result == CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR);
+    TEST_CHECK(context == NULL);
+    result = cprof_decode_opentelemetry_create(&context, input, sizeof(input), NULL);
+    TEST_CHECK(result == CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR);
+    TEST_CHECK(context == NULL);
+    offset = sizeof(input) + 1;
+    result = cprof_decode_opentelemetry_create(&context, input, sizeof(input), &offset);
+    TEST_CHECK(result == CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR);
+    TEST_CHECK(context == NULL);
+    TEST_CHECK(offset == sizeof(input) + 1);
+    offset = SIZE_MAX;
+    result = cprof_decode_opentelemetry_create(&context, input, sizeof(input), &offset);
+    TEST_CHECK(result == CPROF_DECODE_OPENTELEMETRY_INVALID_ARGUMENT_ERROR);
+    TEST_CHECK(context == NULL);
+    TEST_CHECK(offset == SIZE_MAX);
+
+    /* A zero-length protobuf message at the end of the input is valid. */
+    offset = sizeof(input);
+    result = cprof_decode_opentelemetry_create(&context, input, sizeof(input), &offset);
+    TEST_CHECK(result == CPROF_DECODE_OPENTELEMETRY_SUCCESS);
+    TEST_CHECK(context != NULL);
+    TEST_CHECK(offset == sizeof(input));
+    cprof_decode_opentelemetry_destroy(context);
+}
+
+static void test_encoder_attribute_units_by_key(void)
+{
+    struct cprof *context;
+    struct cprof_resource_profiles *resource_profiles;
+    struct cprof_scope_profiles *scope_profiles;
+    struct cprof_profile *profile;
+    struct cprof_attribute_unit *unit;
+    cfl_sds_t encoded;
+    size_t index;
+    size_t found;
+    int result;
+    const char *key;
+    const char *expected;
+    Opentelemetry__Proto__Collector__Profiles__V1development__ExportProfilesServiceRequest *request;
+    Opentelemetry__Proto__Profiles__V1development__KeyValueAndUnit *attribute;
+
+    context = create_minimal_cprof();
+    TEST_ASSERT(context != NULL);
+    resource_profiles = cfl_list_entry(context->profiles.next,
+                                      struct cprof_resource_profiles, _head);
+    scope_profiles = cfl_list_entry(resource_profiles->scope_profiles.next,
+                                   struct cprof_scope_profiles, _head);
+    profile = cfl_list_entry(scope_profiles->profiles.next, struct cprof_profile, _head);
+    TEST_ASSERT(cfl_kvlist_insert_string(profile->attribute_table, "no.unit", "a") == 0);
+    TEST_ASSERT(cfl_kvlist_insert_string(profile->attribute_table, "size", "b") == 0);
+    TEST_ASSERT(cfl_kvlist_insert_string(profile->attribute_table, "duration", "c") == 0);
+    TEST_ASSERT(cfl_kvlist_insert_string(profile->attribute_table, "invalid.unit", "d") == 0);
+
+    /* Invalid keys and a sparse, reversed unit list must not shift units. */
+    unit = cprof_attribute_unit_create(profile);
+    TEST_ASSERT(unit != NULL);
+    unit->attribute_key = -1;
+    unit->unit = 0;
+    unit = cprof_attribute_unit_create(profile);
+    TEST_ASSERT(unit != NULL);
+    unit->attribute_key = INT64_MAX;
+    unit->unit = 0;
+    unit = cprof_attribute_unit_create(profile);
+    TEST_ASSERT(unit != NULL);
+    unit->attribute_key = cprof_profile_string_add(profile, "duration", -1);
+    unit->unit = cprof_profile_string_add(profile, "seconds", -1);
+    unit = cprof_attribute_unit_create(profile);
+    TEST_ASSERT(unit != NULL);
+    unit->attribute_key = cprof_profile_string_add(profile, "size", -1);
+    unit->unit = cprof_profile_string_add(profile, "bytes", -1);
+    unit = cprof_attribute_unit_create(profile);
+    TEST_ASSERT(unit != NULL);
+    unit->attribute_key = cprof_profile_string_add(profile, "invalid.unit", -1);
+    unit->unit = INT64_MAX;
+
+    encoded = NULL;
+    result = cprof_encode_opentelemetry_create(&encoded, context);
+    TEST_ASSERT(result == CPROF_ENCODE_OPENTELEMETRY_SUCCESS);
+    request = opentelemetry__proto__collector__profiles__v1development__export_profiles_service_request__unpack(
+        NULL, cfl_sds_len(encoded), (const unsigned char *) encoded);
+    TEST_ASSERT(request != NULL);
+    TEST_ASSERT(request->dictionary != NULL);
+    found = 0;
+    for (index = 1; index < request->dictionary->n_attribute_table; index++) {
+        attribute = request->dictionary->attribute_table[index];
+        TEST_ASSERT(attribute->key_strindex >= 0 &&
+                    (size_t) attribute->key_strindex < request->dictionary->n_string_table);
+        TEST_ASSERT(attribute->unit_strindex >= 0 &&
+                    (size_t) attribute->unit_strindex < request->dictionary->n_string_table);
+        key = request->dictionary->string_table[attribute->key_strindex];
+        if (strcmp(key, "size") == 0) {
+            expected = "bytes";
+        }
+        else if (strcmp(key, "duration") == 0) {
+            expected = "seconds";
+        }
+        else if (strcmp(key, "no.unit") == 0 || strcmp(key, "invalid.unit") == 0) {
+            expected = "";
+        }
+        else {
+            continue;
+        }
+        found++;
+        TEST_CHECK(strcmp(request->dictionary->string_table[attribute->unit_strindex], expected) == 0);
+        TEST_MSG("attribute %s expected unit %s", key, expected);
+    }
+    TEST_CHECK(found == 4);
+    opentelemetry__proto__collector__profiles__v1development__export_profiles_service_request__free_unpacked(
+        request, NULL);
+    cprof_encode_opentelemetry_destroy(encoded);
+    cprof_destroy(context);
+}
+
 static void check_otlp_depth(size_t depth, int shape)
 {
     struct cprof *original;
@@ -1738,6 +1863,8 @@ static void test_otlp_depth_boundary(void)
 }
 
 TEST_LIST = {
+    {"decoder_argument_validation", test_decoder_argument_validation},
+    {"encoder_attribute_units_by_key", test_encoder_attribute_units_by_key},
     {"otlp_depth_boundary", test_otlp_depth_boundary},
     {"encoder", test_encoder},
     {"decoder", test_decoder},

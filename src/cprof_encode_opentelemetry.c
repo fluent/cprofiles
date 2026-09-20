@@ -1675,21 +1675,28 @@ static int build_profiles_dictionary(
                     }
 
                     i = 0;
-                    unit_iter = profile->attribute_units.next;
                     cfl_list_foreach(attribute_iter, &profile->attribute_table->list) {
                         int32_t unit_strindex;
 
                         attribute = cfl_list_entry(attribute_iter, struct cfl_kvpair, _head);
                         unit_strindex = 0;
-                        if (unit_iter != &profile->attribute_units) {
+                        cfl_list_foreach(unit_iter, &profile->attribute_units) {
                             attribute_unit = cfl_list_entry(unit_iter,
                                                             struct cprof_attribute_unit,
                                                             _head);
+                            if (attribute_unit->attribute_key < 0 ||
+                                (size_t) attribute_unit->attribute_key >= st->string_map_count ||
+                                profile->string_table[attribute_unit->attribute_key] == NULL ||
+                                strcmp(profile->string_table[attribute_unit->attribute_key],
+                                       attribute->key) != 0) {
+                                continue;
+                            }
+
                             if (attribute_unit->unit >= 0 &&
                                 (size_t) attribute_unit->unit < st->string_map_count) {
                                 unit_strindex = st->string_map[attribute_unit->unit];
                             }
-                            unit_iter = unit_iter->next;
+                            break;
                         }
 
                         si = dict_add_attribute(dict, attribute->key, attribute->val,
