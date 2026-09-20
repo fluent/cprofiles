@@ -250,7 +250,7 @@ endif()
 # Installer Generation (Cpack)
 # ============================
 
-set(CPACK_PACKAGE_VERSION ${CPROFILES_VERSION_STR})
+set(CPACK_PACKAGE_VERSION ${CPROF_VERSION_STR})
 set(CPACK_PACKAGE_NAME "cprofiles")
 set(CPACK_PACKAGE_RELEASE 1)
 set(CPACK_PACKAGE_CONTACT "Eduardo Silva <eduardo@calyptia.com>")
