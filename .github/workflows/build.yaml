@@ -18,7 +18,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           submodules: true
 
@@ -108,7 +108,7 @@ jobs:
           export PATH="/usr/local/bin:$PATH"
           /usr/local/bin/cmake --version
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           submodules: true
 
@@ -131,12 +131,12 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           submodules: true
 
       - name: Build on ${{ matrix.os }} with ${{ matrix.compiler }}
-        uses: uraimo/run-on-arch-action@v3.2.0
+        uses: uraimo/run-on-arch-action@460cb8e6d9f726a588fc9b5e681c8a6cab09ae41 # v3.2.0
         with:
           arch: aarch64
           distro: ubuntu_latest
@@ -166,7 +166,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           submodules: true
 
@@ -197,7 +197,7 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           submodules: true
 
