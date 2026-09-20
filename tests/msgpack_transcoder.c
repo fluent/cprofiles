@@ -731,7 +731,53 @@ static void test_decoder_rejects_out_of_range_integers()
     mpack_reader_destroy(&reader);
 }
 
+
+static void test_binary_length_limit(void)
+{
+    unsigned char oversized[] = {0xc6, 0xff, 0xff, 0xff, 0xff};
+    unsigned char boundary[5 + CPROF_MPACK_MAX_STRING_LENGTH] = {0};
+    mpack_reader_t reader;
+    cfl_sds_t output;
+    uint32_t length;
+    int result;
+
+    output = NULL;
+    mpack_reader_init_data(&reader, (const char *) oversized, sizeof(oversized));
+    result = cprof_mpack_consume_binary_tag(&reader, &output);
+    TEST_CHECK(result == CPROF_MPACK_CORRUPT_INPUT_DATA_ERROR);
+    TEST_CHECK(output == NULL);
+    cfl_sds_destroy(output);
+    mpack_reader_destroy(&reader);
+
+    length = CPROF_MPACK_MAX_STRING_LENGTH;
+    boundary[0] = 0xc6;
+    boundary[1] = (length >> 24) & 0xff;
+    boundary[2] = (length >> 16) & 0xff;
+    boundary[3] = (length >> 8) & 0xff;
+    boundary[4] = length & 0xff;
+    output = NULL;
+    mpack_reader_init_data(&reader, (const char *) boundary, sizeof(boundary));
+    result = cprof_mpack_consume_binary_tag(&reader, &output);
+    TEST_CHECK(result == CPROF_MPACK_SUCCESS);
+    TEST_ASSERT(output != NULL);
+    TEST_CHECK(cfl_sds_len(output) == length);
+    cfl_sds_destroy(output);
+    TEST_CHECK(mpack_reader_destroy(&reader) == mpack_ok);
+
+    length++;
+    boundary[3] = (length >> 8) & 0xff;
+    boundary[4] = length & 0xff;
+    output = NULL;
+    mpack_reader_init_data(&reader, (const char *) boundary, 5);
+    result = cprof_mpack_consume_binary_tag(&reader, &output);
+    TEST_CHECK(result == CPROF_MPACK_CORRUPT_INPUT_DATA_ERROR);
+    TEST_CHECK(output == NULL);
+    cfl_sds_destroy(output);
+    mpack_reader_destroy(&reader);
+}
+
 TEST_LIST = {
+    {"binary_length_limit", test_binary_length_limit},
     {"encoder", test_encoder},
     {"decoder", test_decoder},
     {"decoder_rejects_out_of_range_integers", test_decoder_rejects_out_of_range_integers},
