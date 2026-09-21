@@ -1676,10 +1676,27 @@ static int build_profiles_dictionary(
 
                     i = 0;
                     cfl_list_foreach(attribute_iter, &profile->attribute_table->list) {
+                        struct cfl_list *previous_iter;
+                        struct cfl_kvpair *previous_attribute;
+                        size_t occurrence;
                         int32_t unit_strindex;
 
                         attribute = cfl_list_entry(attribute_iter, struct cfl_kvpair, _head);
                         unit_strindex = 0;
+
+                        /* Units follow occurrence order within each key, even
+                         * when entries for different keys are sparse or reordered.
+                         */
+                        occurrence = 0;
+                        for (previous_iter = profile->attribute_table->list.next;
+                             previous_iter != attribute_iter;
+                             previous_iter = previous_iter->next) {
+                            previous_attribute = cfl_list_entry(previous_iter,
+                                                               struct cfl_kvpair, _head);
+                            if (strcmp(previous_attribute->key, attribute->key) == 0) {
+                                occurrence++;
+                            }
+                        }
                         cfl_list_foreach(unit_iter, &profile->attribute_units) {
                             attribute_unit = cfl_list_entry(unit_iter,
                                                             struct cprof_attribute_unit,
@@ -1689,6 +1706,11 @@ static int build_profiles_dictionary(
                                 profile->string_table[attribute_unit->attribute_key] == NULL ||
                                 strcmp(profile->string_table[attribute_unit->attribute_key],
                                        attribute->key) != 0) {
+                                continue;
+                            }
+
+                            if (occurrence > 0) {
+                                occurrence--;
                                 continue;
                             }
 
