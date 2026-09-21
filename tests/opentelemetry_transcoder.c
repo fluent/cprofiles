@@ -1800,6 +1800,90 @@ static void test_encoder_attribute_units_by_key(void)
     cprof_destroy(context);
 }
 
+static void test_repeated_attribute_units_roundtrip(void)
+{
+    struct cprof *context;
+    cfl_sds_t encoded;
+    size_t index;
+    size_t first;
+    int32_t key;
+    int32_t unit;
+    int32_t output_index;
+    int64_t values[] = {11, 22, 11};
+    Opentelemetry__Proto__Collector__Profiles__V1development__ExportProfilesServiceRequest *request;
+    Opentelemetry__Proto__Collector__Profiles__V1development__ExportProfilesServiceRequest *output;
+    Opentelemetry__Proto__Profiles__V1development__ProfilesDictionary *dictionary;
+    Opentelemetry__Proto__Profiles__V1development__KeyValueAndUnit **attributes;
+    Opentelemetry__Proto__Profiles__V1development__KeyValueAndUnit *attribute;
+    Opentelemetry__Proto__Profiles__V1development__Sample *sample;
+    int32_t *indices;
+
+    request = create_unpacked_dictionary_request();
+    TEST_ASSERT(request != NULL);
+    dictionary = request->dictionary;
+    key = dictionary->attribute_table[1]->key_strindex;
+    unit = dictionary->attribute_table[1]->unit_strindex;
+    first = dictionary->n_attribute_table;
+    attributes = realloc(dictionary->attribute_table,
+                         (first + 3) * sizeof(*attributes));
+    TEST_ASSERT(attributes != NULL);
+    dictionary->attribute_table = attributes;
+    for (index = 0; index < 3; index++) {
+        attribute = calloc(1, sizeof(*attribute));
+        TEST_ASSERT(attribute != NULL);
+        opentelemetry__proto__profiles__v1development__key_value_and_unit__init(attribute);
+        attribute->key_strindex = key;
+        attribute->unit_strindex = index == 0 ? unit : 0;
+        attribute->value = calloc(1, sizeof(*attribute->value));
+        TEST_ASSERT(attribute->value != NULL);
+        opentelemetry__proto__common__v1__any_value__init(attribute->value);
+        attribute->value->value_case = OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_INT_VALUE;
+        attribute->value->int_value = values[index];
+        dictionary->attribute_table[dictionary->n_attribute_table++] = attribute;
+    }
+
+    sample = request->resource_profiles[0]->scope_profiles[0]->profiles[0]->samples[0];
+    indices = realloc(sample->attribute_indices, 3 * sizeof(*indices));
+    TEST_ASSERT(indices != NULL);
+    sample->attribute_indices = indices;
+    sample->n_attribute_indices = 3;
+    for (index = 0; index < 3; index++) {
+        indices[index] = (int32_t) (first + index);
+    }
+
+    context = NULL;
+    TEST_ASSERT(decode_export_service_request(&context, request) == 0);
+    TEST_ASSERT(context != NULL);
+    encoded = NULL;
+    TEST_ASSERT(cprof_encode_opentelemetry_create(&encoded, context) == 0);
+    output = opentelemetry__proto__collector__profiles__v1development__export_profiles_service_request__unpack(
+        NULL, cfl_sds_len(encoded), (const unsigned char *) encoded);
+    TEST_ASSERT(output != NULL);
+    sample = output->resource_profiles[0]->scope_profiles[0]->profiles[0]->samples[0];
+    TEST_ASSERT(sample->n_attribute_indices == 3);
+    for (index = 0; index < 3; index++) {
+        output_index = sample->attribute_indices[index];
+        TEST_ASSERT(output_index >= 0 &&
+                    (size_t) output_index < output->dictionary->n_attribute_table);
+        attribute = output->dictionary->attribute_table[output_index];
+        TEST_CHECK(attribute->value->value_case ==
+                   OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_INT_VALUE);
+        TEST_CHECK(attribute->value->int_value == values[index]);
+        TEST_ASSERT(attribute->unit_strindex >= 0 &&
+                    (size_t) attribute->unit_strindex < output->dictionary->n_string_table);
+        TEST_CHECK(strcmp(output->dictionary->string_table[attribute->unit_strindex],
+                          index == 0 ? dictionary->string_table[unit] : "") == 0);
+        TEST_MSG("repeated attribute occurrence %zu", index);
+    }
+
+    opentelemetry__proto__collector__profiles__v1development__export_profiles_service_request__free_unpacked(
+        output, NULL);
+    opentelemetry__proto__collector__profiles__v1development__export_profiles_service_request__free_unpacked(
+        request, NULL);
+    cprof_encode_opentelemetry_destroy(encoded);
+    cprof_destroy(context);
+}
+
 static void check_otlp_depth(size_t depth, int shape)
 {
     struct cprof *original;
@@ -1863,6 +1947,7 @@ static void test_otlp_depth_boundary(void)
 }
 
 TEST_LIST = {
+    {"repeated_attribute_units_roundtrip", test_repeated_attribute_units_roundtrip},
     {"decoder_argument_validation", test_decoder_argument_validation},
     {"encoder_attribute_units_by_key", test_encoder_attribute_units_by_key},
     {"otlp_depth_boundary", test_otlp_depth_boundary},
